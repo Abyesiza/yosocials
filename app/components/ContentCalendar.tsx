@@ -27,7 +27,9 @@ const week: CalendarDay[] = [
   {
     day: "Wed",
     date: "14",
-    items: [{ platform: "whatsapp", title: "Status: weekly tip", time: "6:00 PM" }],
+    items: [{ platform: "whatsapp", title: "Status: weekly tip", time: "6:00 PM" },
+            {platform: "facebook", title: "Facebook update", time:"7:00PM"}
+    ],
   },
   {
     day: "Thu",
@@ -39,6 +41,11 @@ const week: CalendarDay[] = [
         time: "11:00 AM",
         status: "Pending approval",
       },
+      {
+        platform: "linkedin",
+        title: "Just some linkedin",
+        time: "2:00AM"
+      }
     ],
   },
   {
