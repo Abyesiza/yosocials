@@ -36,12 +36,19 @@ export class AnalyticsService {
     private readonly registry: IntegrationsRegistry,
   ) {}
 
-  /** Captures fresh metrics for recently published targets. Returns count. */
-  async collectDue(): Promise<number> {
-    const due = await this.targets
+  /**
+   * Captures fresh metrics for recently published targets: every workspace's
+   * when called by the scheduler, or one workspace's for a manual refresh.
+   * Returns how many targets were captured.
+   */
+  async collectDue(workspaceId?: string): Promise<number> {
+    const qb = this.targets
       .createQueryBuilder('t')
       .innerJoinAndSelect('t.account', 'a')
-      .where('t.status = :published', { published: TargetStatus.Published })
+      .where('t.status = :published', { published: TargetStatus.Published });
+    if (workspaceId)
+      qb.andWhere('a.workspaceId = :workspaceId', { workspaceId });
+    const due = await qb
       .andWhere('t.externalId IS NOT NULL')
       .andWhere('a.status = :active', { active: AccountStatus.Active })
       .andWhere(`t.publishedAt > now() - make_interval(days => :days)`, {
@@ -80,8 +87,14 @@ export class AnalyticsService {
     return captured;
   }
 
-  async history(targetId: string): Promise<MetricPointDto[]> {
-    if (!(await this.targets.existsBy({ id: targetId }))) {
+  async history(
+    workspaceId: string,
+    targetId: string,
+  ): Promise<MetricPointDto[]> {
+    const owned = await this.targets.exists({
+      where: { id: targetId, account: { workspaceId } },
+    });
+    if (!owned) {
       throw new NotFoundException(`Target ${targetId} not found`);
     }
     return this.snapshots.find({
@@ -98,12 +111,18 @@ export class AnalyticsService {
     });
   }
 
-  async overview(days: number): Promise<OverviewResponseDto> {
+  async overview(
+    workspaceId: string,
+    days: number,
+  ): Promise<OverviewResponseDto> {
     const base = () =>
       this.targets
         .createQueryBuilder('t')
         .innerJoin('t.account', 'a')
-        .where('t.status = :published', { published: TargetStatus.Published })
+        .where('a.workspaceId = :workspaceId', { workspaceId })
+        .andWhere('t.status = :published', {
+          published: TargetStatus.Published,
+        })
         .andWhere(`t.publishedAt > now() - make_interval(days => :days)`, {
           days,
         });

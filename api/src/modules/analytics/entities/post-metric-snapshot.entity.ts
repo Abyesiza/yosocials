@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
 import { PostTarget } from '../../posts/entities/post-target.entity.js';
 
@@ -24,7 +25,7 @@ export class PostMetricSnapshot {
 
   @ManyToOne(() => PostTarget, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'targetId' })
-  target: PostTarget;
+  target: Relation<PostTarget>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   capturedAt: Date;

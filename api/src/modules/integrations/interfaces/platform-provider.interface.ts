@@ -71,6 +71,9 @@ export interface PlatformProvider<TCredentials extends object = object> {
     input: PublishInput,
   ): Promise<PublishResult>;
 
+  /** Ends any platform session held for these credentials (account disconnected). */
+  disconnect?(credentials: TCredentials): Promise<void>;
+
   /** Only called when `capabilities.supportsMetrics` is true. */
   fetchMetrics?(
     credentials: TCredentials,

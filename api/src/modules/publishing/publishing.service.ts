@@ -47,8 +47,12 @@ export class PublishingService {
   }
 
   /** Publishes a post's unpublished targets immediately. */
-  async publishNow(postId: string): Promise<PublishOutcome[]> {
-    const post = await this.posts.findOne(postId);
+  async publishNow(
+    workspaceId: string,
+    postId: string,
+  ): Promise<PublishOutcome[]> {
+    // Scoped lookup: a post from another workspace is "not found".
+    const post = await this.posts.findOne(workspaceId, postId);
     this.posts.assertTextFits(
       post,
       post.targets.filter((t) => t.status !== TargetStatus.Published),

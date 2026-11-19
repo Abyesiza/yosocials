@@ -1,34 +1,45 @@
-import { randomBytes } from 'node:crypto';
-import { PGlite } from '@electric-sql/pglite';
-import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
-import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import type { App } from 'supertest/types.js';
-import { DataSource } from 'typeorm';
-import type { LanguageModel } from '../src/modules/agent/interfaces/language-model.interface.js';
+import { PublishingService } from '../src/modules/publishing/publishing.service.js';
+import {
+  CID,
+  createRecordBody,
+  DID,
+  HANDLE,
+  sessionBody,
+  tid,
+} from './support/bluesky-fixtures.js';
 import { mockFetch } from './support/mock-fetch.js';
+import {
+  signUp,
+  startTestApp,
+  type SignedUp,
+  type TestApp,
+} from './support/test-app.js';
 
 /**
- * Boots the real app against an in-memory Postgres (PGlite) with migrations,
- * a fake language model, and stubbed platform APIs, then walks the whole
- * flow: connect → post → publish → feed → metrics → agent plan → schedule.
+ * The whole product flow inside one workspace, signed in as its owner:
+ * connect → post → publish → feed → metrics → agent plan → schedule.
+ * Platforms are stubbed and the language model is fake.
  */
 
-const PORT = 20_000 + Math.floor(Math.random() * 20_000);
 const MASTODON_TOKEN = 'm'.repeat(40);
 const BSKY = 'bsky.social/xrpc';
 
-let app: INestApplication<App>;
-let http: ReturnType<typeof request>;
-let db: PGlite;
-let server: PGLiteSocketServer;
-let dataSource: DataSource;
+let t: TestApp;
+let http: TestApp['http'];
+let owner: SignedUp;
 let publishDue: () => Promise<{ status: string; error?: string }[]>;
-const model = {
-  modelName: 'fake-model',
-  generateJson: vi.fn(),
-} satisfies LanguageModel;
+
+/** Requests inside the owner's workspace, signed in. */
+const api = {
+  get: (path: string) =>
+    http.get(`/api/workspaces/${owner.workspaceId}${path}`).set(owner.auth),
+  post: (path: string) =>
+    http.post(`/api/workspaces/${owner.workspaceId}${path}`).set(owner.auth),
+  patch: (path: string) =>
+    http.patch(`/api/workspaces/${owner.workspaceId}${path}`).set(owner.auth),
+  delete: (path: string) =>
+    http.delete(`/api/workspaces/${owner.workspaceId}${path}`).set(owner.auth),
+};
 
 let mastodonId: string;
 let blueskyId: string;
@@ -78,75 +89,40 @@ function stubPlatforms() {
       },
     }),
     [`POST ${BSKY}/com.atproto.server.createSession`]: () => ({
-      body: {
-        did: 'did:plc:yo',
-        handle: 'yo.bsky.social',
-        accessJwt: 'jwt',
-        refreshJwt: 'r',
-      },
+      body: sessionBody(),
     }),
-    'GET public.api.bsky.app/xrpc/app.bsky.actor.getProfile': () => ({
-      body: { did: 'did:plc:yo', handle: 'yo.bsky.social', displayName: 'Yo' },
+    [`POST ${BSKY}/com.atproto.server.refreshSession`]: () => ({
+      body: sessionBody(),
+    }),
+    [`GET ${BSKY}/app.bsky.actor.getProfile`]: () => ({
+      body: { did: DID, handle: HANDLE, displayName: 'Yo' },
     }),
     [`POST ${BSKY}/com.atproto.repo.createRecord`]: () => ({
-      body: {
-        uri: `at://did:plc:yo/app.bsky.feed.post/${++blueskyCounter}`,
-        cid: 'c',
-      },
+      body: createRecordBody(tid(++blueskyCounter)),
     }),
-    'GET public.api.bsky.app/xrpc/app.bsky.feed.getPosts': (req) => ({
+    [`GET ${BSKY}/app.bsky.feed.getPosts`]: (req) => ({
       body: {
-        posts: req.url.searchParams
-          .getAll('uris')
-          .map((uri) => ({
-            uri,
-            cid: 'c',
-            likeCount: 11,
-            repostCount: 1,
-            replyCount: 0,
-            quoteCount: 1,
-          })),
+        posts: req.url.searchParams.getAll('uris').map((uri) => ({
+          uri,
+          cid: CID,
+          author: { did: DID, handle: HANDLE },
+          record: {},
+          indexedAt: new Date().toISOString(),
+          likeCount: 11,
+          repostCount: 1,
+          replyCount: 0,
+          quoteCount: 1,
+        })),
       },
     }),
   });
 }
 
 beforeAll(async () => {
-  db = await PGlite.create();
-  server = new PGLiteSocketServer({
-    db,
-    port: PORT,
-    host: '127.0.0.1',
-    maxConnections: 20,
-  });
-  await server.start();
-
-  Object.assign(process.env, {
-    NODE_ENV: 'test',
-    DATABASE_URL: `postgres://postgres:postgres@127.0.0.1:${PORT}/postgres`,
-    CREDENTIALS_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
-    SCHEDULER_ENABLED: 'false',
-  });
-
-  // Imported after env is set: ConfigModule validates env at import time.
-  const { AppModule } = await import('../src/app.module.js');
-  const { configureApp } = await import('../src/app.setup.js');
-  const { LANGUAGE_MODEL } =
-    await import('../src/modules/agent/interfaces/language-model.interface.js');
-  const { PublishingService } =
-    await import('../src/modules/publishing/publishing.service.js');
-
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(LANGUAGE_MODEL)
-    .useValue(model)
-    .compile();
-
-  app = moduleRef.createNestApplication();
-  configureApp(app);
-  await app.init();
-  http = request(app.getHttpServer());
-  dataSource = app.get(DataSource);
-  const publishing = app.get(PublishingService);
+  t = await startTestApp();
+  http = t.http;
+  owner = await signUp(http, 'Owner');
+  const publishing = t.app.get(PublishingService);
   publishDue = () => publishing.publishDue();
 }, 60_000);
 
@@ -157,16 +133,12 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-afterAll(async () => {
-  await app?.close();
-  await server?.stop();
-  await db?.close();
-});
+afterAll(() => t?.close());
 
 describe('Yo Socials API', () => {
   it('reports healthy with migrations applied', async () => {
     await http.get('/api/health').expect(200, { status: 'ok', database: 'up' });
-    const tables: { table_name: string }[] = await dataSource.query(
+    const tables: { table_name: string }[] = await t.dataSource.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY 1`,
     );
     expect(tables.map((t) => t.table_name)).toEqual(
@@ -175,6 +147,10 @@ describe('Yo Socials API', () => {
         'post_targets',
         'posts',
         'social_accounts',
+        'users',
+        'workspaces',
+        'workspace_members',
+        'auth_refresh_tokens',
       ]),
     );
   });
@@ -187,8 +163,8 @@ describe('Yo Socials API', () => {
   });
 
   it('connects accounts, never returning or storing plaintext credentials', async () => {
-    const mastodon = await http
-      .post('/api/accounts')
+    const mastodon = await api
+      .post('/accounts')
       .send({
         platform: 'mastodon',
         credentials: {
@@ -208,8 +184,8 @@ describe('Yo Socials API', () => {
     expect(JSON.stringify(mastodon.body)).not.toContain(MASTODON_TOKEN);
     mastodonId = mastodon.body.id;
 
-    const bluesky = await http
-      .post('/api/accounts')
+    const bluesky = await api
+      .post('/accounts')
       .send({
         platform: 'bluesky',
         credentials: {
@@ -220,7 +196,7 @@ describe('Yo Socials API', () => {
       .expect(201);
     blueskyId = bluesky.body.id;
 
-    const [row]: { encryptedCredentials: string }[] = await dataSource.query(
+    const [row]: { encryptedCredentials: string }[] = await t.dataSource.query(
       `SELECT "encryptedCredentials" FROM social_accounts WHERE id = $1`,
       [mastodonId],
     );
@@ -229,8 +205,8 @@ describe('Yo Socials API', () => {
   });
 
   it('rejects credentials with unknown fields', async () => {
-    const res = await http
-      .post('/api/accounts')
+    const res = await api
+      .post('/accounts')
       .send({
         platform: 'discord',
         credentials: { webhookUrl: 'https://evil.example/hook', extra: 1 },
@@ -244,8 +220,8 @@ describe('Yo Socials API', () => {
   });
 
   it('rejects text longer than a platform allows', async () => {
-    const res = await http
-      .post('/api/posts')
+    const res = await api
+      .post('/posts')
       .send({ body: 'x'.repeat(301), targets: [{ accountId: blueskyId }] })
       .expect(400);
     expect(res.body.message[0]).toContain(
@@ -254,8 +230,8 @@ describe('Yo Socials API', () => {
   });
 
   it('publishes due posts exactly once, even with concurrent schedulers', async () => {
-    const created = await http
-      .post('/api/posts')
+    const created = await api
+      .post('/posts')
       .send({
         title: 'Launch',
         body: 'We are live! #launch',
@@ -281,12 +257,12 @@ describe('Yo Socials API', () => {
     );
     expect(sends).toHaveLength(2);
 
-    const post = await http.get(`/api/posts/${created.body.id}`).expect(200);
+    const post = await api.get(`/posts/${created.body.id}`).expect(200);
     expect(post.body.status).toBe('published');
   });
 
   it('shows published posts from every account in the unified feed', async () => {
-    const res = await http.get('/api/feed').expect(200);
+    const res = await api.get('/feed').expect(200);
     expect(res.body.total).toBe(2);
     expect(
       res.body.items
@@ -306,18 +282,16 @@ describe('Yo Socials API', () => {
       /^https:\/\/bsky\.app\/profile\/yo\.bsky\.social\/post\//,
     );
 
-    const filtered = await http.get('/api/feed?platform=mastodon').expect(200);
+    const filtered = await api.get('/feed?platform=mastodon').expect(200);
     expect(filtered.body.total).toBe(1);
   });
 
   it('captures metrics and reports them in analytics', async () => {
-    await http.post('/api/analytics/refresh').expect(200, { captured: 2 });
+    await api.post('/analytics/refresh').expect(200, { captured: 2 });
     // Second refresh inside the 30-minute window is a no-op.
-    await http.post('/api/analytics/refresh').expect(200, { captured: 0 });
+    await api.post('/analytics/refresh').expect(200, { captured: 0 });
 
-    const overview = await http
-      .get('/api/analytics/overview?days=7')
-      .expect(200);
+    const overview = await api.get('/analytics/overview?days=7').expect(200);
     expect(overview.body.totals).toEqual({
       posts: 2,
       likes: 18,
@@ -332,18 +306,18 @@ describe('Yo Socials API', () => {
       engagement: 13,
     });
 
-    const feed = await http.get('/api/feed?platform=mastodon').expect(200);
+    const feed = await api.get('/feed?platform=mastodon').expect(200);
     const target = feed.body.items[0];
     expect(target.metrics).toMatchObject({ likes: 7, reposts: 3, replies: 2 });
-    const history = await http
-      .get(`/api/analytics/targets/${target.id}/history`)
+    const history = await api
+      .get(`/analytics/targets/${target.id}/history`)
       .expect(200);
     expect(history.body).toHaveLength(1);
   });
 
   it('retries transient failures with backoff and flags revoked tokens', async () => {
-    const post = await http
-      .post('/api/posts')
+    const post = await api
+      .post('/posts')
       .send({
         body: 'Retry me',
         scheduledAt: new Date(Date.now() - 1000).toISOString(),
@@ -357,7 +331,7 @@ describe('Yo Socials API', () => {
       { targetId, status: 'scheduled', error: 'HTTP 503' },
     ]);
     const [retry]: { scheduledAt: Date; attempts: number }[] =
-      await dataSource.query(
+      await t.dataSource.query(
         `SELECT "scheduledAt", attempts FROM post_targets WHERE id = $1`,
         [targetId],
       );
@@ -365,21 +339,19 @@ describe('Yo Socials API', () => {
     expect(new Date(retry.scheduledAt).getTime()).toBeGreaterThan(Date.now());
 
     mastodonStatus = 401;
-    const now = await http
-      .post(`/api/posts/${post.body.id}/publish`)
-      .expect(200);
+    const now = await api.post(`/posts/${post.body.id}/publish`).expect(200);
     expect(now.body).toEqual([
       { targetId, status: 'failed', error: 'HTTP 401' },
     ]);
-    const account = await http.get(`/api/accounts/${mastodonId}`).expect(200);
+    const account = await api.get(`/accounts/${mastodonId}`).expect(200);
     expect(account.body).toMatchObject({
       status: 'needs_reconnect',
       lastError: 'HTTP 401',
     });
 
     // Reconnecting clears the flag.
-    await http
-      .post('/api/accounts')
+    await api
+      .post('/accounts')
       .send({
         platform: 'mastodon',
         credentials: {
@@ -388,14 +360,14 @@ describe('Yo Socials API', () => {
         },
       })
       .expect(201);
-    await http.delete(`/api/posts/${post.body.id}`).expect(204);
+    await api.delete(`/posts/${post.body.id}`).expect(204);
   });
 
   it('turns an agent plan into drafts, dropping suggestions that break rules', async () => {
     const start = new Date(Date.now() + 86_400_000);
     const at = (h: number) =>
       new Date(start.getTime() + h * 3_600_000).toISOString();
-    model.generateJson.mockResolvedValueOnce({
+    t.model.generateJson.mockResolvedValueOnce({
       posts: [
         {
           title: 'Teaser',
@@ -423,8 +395,8 @@ describe('Yo Socials API', () => {
       ],
     });
 
-    const plan = await http
-      .post('/api/agent/plan')
+    const plan = await api
+      .post('/agent/plan')
       .send({
         brief: 'Tease our launch next week to existing followers.',
         accountIds: [mastodonId, blueskyId],
@@ -447,19 +419,19 @@ describe('Yo Socials API', () => {
       /allows 300 graphemes[\s\S]*outside the window/,
     );
 
-    const prompt = model.generateJson.mock.calls[0][0].prompt as string;
+    const prompt = t.model.generateJson.mock.calls[0][0].prompt as string;
     expect(prompt).toContain('Warm, concise, no jargon');
     expect(prompt).toContain('Africa/Kampala');
 
     const postId: string = plan.body.posts[0].id;
-    const scheduled = await http
-      .post(`/api/posts/${postId}/schedule`)
+    const scheduled = await api
+      .post(`/posts/${postId}/schedule`)
       .send({})
       .expect(200);
     expect(scheduled.body.status).toBe('scheduled');
 
-    const calendar = await http
-      .get('/api/calendar')
+    const calendar = await api
+      .get('/calendar')
       .query({ from: start.toISOString(), to: at(24 * 7) })
       .expect(200);
     expect(calendar.body.map((i: { postId: string }) => i.postId)).toContain(
@@ -467,12 +439,46 @@ describe('Yo Socials API', () => {
     );
   });
 
+  it('never plans into the past, even when the window starts today', async () => {
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    t.model.generateJson.mockResolvedValueOnce({
+      posts: [
+        {
+          title: 'Too early',
+          idea: 'x',
+          targets: [
+            {
+              accountId: mastodonId,
+              text: 'Morning post',
+              scheduledAt: new Date(Date.now() - 60_000).toISOString(),
+            },
+          ],
+        },
+      ],
+    });
+    const plan = await api
+      .post('/agent/plan')
+      .send({
+        brief: 'Anything at all here',
+        accountIds: [mastodonId],
+        startDate: midnight.toISOString(),
+        days: 1,
+      })
+      .expect(200);
+    expect(plan.body.posts).toHaveLength(0);
+    expect(plan.body.skipped[0]).toMatch(/outside the window/);
+    expect(t.model.generateJson.mock.lastCall?.[0].system).toMatch(
+      /Never make up a link/,
+    );
+  });
+
   it('rejects malformed model output instead of saving it', async () => {
-    model.generateJson.mockResolvedValueOnce({
+    t.model.generateJson.mockResolvedValueOnce({
       posts: [{ title: 'No targets' }],
     });
-    await http
-      .post('/api/agent/plan')
+    await api
+      .post('/agent/plan')
       .send({
         brief: 'Anything at all here',
         accountIds: [mastodonId],

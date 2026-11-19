@@ -1,12 +1,28 @@
-import { Column, Entity, Index } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  type Relation,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity.js';
 import { Platform } from '../../../common/enums/platform.enum.js';
+import { Workspace } from '../../workspaces/entities/workspace.entity.js';
 import { AccountPersona } from '../enums/account-persona.enum.js';
 import { AccountStatus } from '../enums/account-status.enum.js';
 
 @Entity('social_accounts')
-@Index(['platform', 'externalId'], { unique: true })
+// The same platform account can be connected once per workspace.
+@Index(['workspaceId', 'platform', 'externalId'], { unique: true })
 export class SocialAccount extends BaseEntity {
+  @Column('uuid')
+  workspaceId: string;
+
+  @ManyToOne(() => Workspace, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'workspaceId' })
+  workspace: Relation<Workspace>;
+
   @Column({ type: 'enum', enum: Platform })
   platform: Platform;
 

@@ -13,6 +13,11 @@ import type { UpdateAccountDto } from './dto/update-account.dto.js';
 import { SocialAccount } from './entities/social-account.entity.js';
 import { AccountStatus } from './enums/account-status.enum.js';
 
+/**
+ * Every public method takes the workspace first and only ever touches that
+ * workspace's accounts. `getCredentials` and `recordFailure` are for the
+ * background jobs, which work across workspaces by account id.
+ */
 @Injectable()
 export class AccountsService {
   constructor(
@@ -26,7 +31,10 @@ export class AccountsService {
    * Validates and verifies the credentials against the platform, then stores
    * them encrypted. Reconnecting the same platform account updates it in place.
    */
-  async connect(dto: ConnectAccountDto): Promise<SocialAccount> {
+  async connect(
+    workspaceId: string,
+    dto: ConnectAccountDto,
+  ): Promise<SocialAccount> {
     const provider = this.registry.get(dto.platform);
     const credentials = await provider.parseCredentials(dto.credentials);
     const verified = await this.verifyOrReject(() =>
@@ -34,10 +42,11 @@ export class AccountsService {
     );
 
     const existing = await this.accounts.findOneBy({
+      workspaceId,
       platform: dto.platform,
       externalId: verified.externalId,
     });
-    const account = existing ?? this.accounts.create();
+    const account = existing ?? this.accounts.create({ workspaceId });
 
     Object.assign(account, {
       platform: dto.platform,
@@ -53,22 +62,26 @@ export class AccountsService {
       encryptedCredentials: this.crypto.encryptJson(credentials),
     });
     const saved = await this.accounts.save(account);
-    return this.findOne(saved.id);
+    return this.findOne(workspaceId, saved.id);
   }
 
-  findAll(): Promise<SocialAccount[]> {
-    return this.accounts.find({ order: { createdAt: 'ASC' } });
+  findAll(workspaceId: string): Promise<SocialAccount[]> {
+    return this.accounts.find({
+      where: { workspaceId },
+      order: { createdAt: 'ASC' },
+    });
   }
 
-  async findOne(id: string): Promise<SocialAccount> {
-    const account = await this.accounts.findOneBy({ id });
+  async findOne(workspaceId: string, id: string): Promise<SocialAccount> {
+    const account = await this.accounts.findOneBy({ id, workspaceId });
     if (!account) throw new NotFoundException(`Account ${id} not found`);
     return account;
   }
 
-  async findMany(ids: string[]): Promise<SocialAccount[]> {
+  /** All of `ids`, which must belong to the workspace. */
+  async findMany(workspaceId: string, ids: string[]): Promise<SocialAccount[]> {
     const unique = [...new Set(ids)];
-    const found = await this.accounts.findBy({ id: In(unique) });
+    const found = await this.accounts.findBy({ id: In(unique), workspaceId });
     const missing = unique.filter((id) => !found.some((a) => a.id === id));
     if (missing.length > 0) {
       throw new NotFoundException(`Accounts not found: ${missing.join(', ')}`);
@@ -76,16 +89,20 @@ export class AccountsService {
     return found;
   }
 
-  async update(id: string, dto: UpdateAccountDto): Promise<SocialAccount> {
-    const account = await this.findOne(id);
+  async update(
+    workspaceId: string,
+    id: string,
+    dto: UpdateAccountDto,
+  ): Promise<SocialAccount> {
+    const account = await this.findOne(workspaceId, id);
     if (dto.persona !== undefined) account.persona = dto.persona;
     if (dto.voice !== undefined) account.voice = dto.voice;
     return this.accounts.save(account);
   }
 
   /** Re-checks stored credentials and refreshes profile details. */
-  async reverify(id: string): Promise<SocialAccount> {
-    const account = await this.findOne(id);
+  async reverify(workspaceId: string, id: string): Promise<SocialAccount> {
+    const account = await this.findOne(workspaceId, id);
     const provider = this.registry.get(account.platform);
     const credentials = await this.getCredentials(id);
     try {
@@ -105,8 +122,13 @@ export class AccountsService {
     return this.accounts.save(account);
   }
 
-  async remove(id: string): Promise<void> {
-    const account = await this.findOne(id);
+  async remove(workspaceId: string, id: string): Promise<void> {
+    const account = await this.findOne(workspaceId, id);
+    const provider = this.registry.get(account.platform);
+    // Best effort: end the platform session so its tokens don't outlive the account.
+    await provider
+      .disconnect?.(await this.getCredentials(id))
+      .catch(() => undefined);
     await this.accounts.remove(account);
   }
 

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { WorkspacesModule } from '../workspaces/workspaces.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountsModule } from '../accounts/accounts.module.js';
 import { IntegrationsModule } from '../integrations/integrations.module.js';
@@ -9,6 +10,7 @@ import { PostMetricSnapshot } from './entities/post-metric-snapshot.entity.js';
 
 @Module({
   imports: [
+    WorkspacesModule,
     TypeOrmModule.forFeature([PostMetricSnapshot]),
     PostsModule,
     AccountsModule,

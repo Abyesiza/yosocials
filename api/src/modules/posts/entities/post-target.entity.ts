@@ -1,4 +1,12 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  Unique,
+  type Relation,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity.js';
 import { SocialAccount } from '../../accounts/entities/social-account.entity.js';
 import { TargetStatus } from '../enums/post-status.enum.js';
@@ -19,14 +27,14 @@ export class PostTarget extends BaseEntity {
 
   @ManyToOne(() => Post, (post) => post.targets, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'postId' })
-  post: Post;
+  post: Relation<Post>;
 
   @Column('uuid')
   accountId: string;
 
   @ManyToOne(() => SocialAccount, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'accountId' })
-  account: SocialAccount;
+  account: Relation<SocialAccount>;
 
   /** Platform-specific text. `null` means use the post's body. */
   @Column({ type: 'text', nullable: true })

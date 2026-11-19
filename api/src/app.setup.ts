@@ -23,7 +23,8 @@ export function configureApp(app: INestApplication): void {
     new DocumentBuilder()
       .setTitle('Yo Socials API')
       .setDescription('Plan, publish and track posts across every platform.')
-      .setVersion('0.1.0')
+      .setVersion('0.2.0')
+      .addBearerAuth()
       .build(),
   );
   SwaggerModule.setup('api/docs', app, document);

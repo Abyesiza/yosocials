@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { type Client, currentDatetimeString } from '@atproto/lex';
+import type { AtUriString } from '@atproto/syntax';
+import { post } from '@bsky/sdk';
+import { app } from '@bsky/sdk/lexicons';
+import { RichText } from '@bsky/sdk/richtext';
 import { Platform } from '../../../../common/enums/platform.enum.js';
-import {
-  PlatformApiError,
-  requestJson,
-} from '../../../../common/http/http-client.js';
 import type {
   PlatformProvider,
   PostMetrics,
@@ -12,28 +13,20 @@ import type {
   PublishResult,
   VerifiedAccount,
 } from '../../interfaces/platform-provider.interface.js';
+import { LinkPreviewService } from '../../link-preview/link-preview.service.js';
 import { parseCredentialsDto } from '../../parse-credentials.js';
+import { BlueskyClientFactory } from './bluesky-client.js';
 import { BlueskyCredentialsDto } from './bluesky-credentials.dto.js';
-import { detectFacets } from './bluesky-facets.js';
-import type {
-  BlueskyCreateRecordResponse,
-  BlueskyFacet,
-  BlueskyGetPostsResponse,
-  BlueskyProfile,
-  BlueskySession,
-} from './bluesky.types.js';
 
-const DEFAULT_SERVICE = 'https://bsky.social';
-/** Public AppView: reads (profiles, post counts) need no auth. */
-const APPVIEW = 'https://public.api.bsky.app';
+// getPosts accepts at most 25 URIs per call.
 const GET_POSTS_BATCH = 25;
-/** Access JWTs live ~2h; reuse sessions well inside that window. */
-const SESSION_TTL_MS = 60 * 60 * 1000;
 
-/**
- * Bluesky via the AT Protocol XRPC API. createSession is rate limited
- * (~30 per 5 min per account), so sessions are cached in memory.
- */
+type External = Parameters<
+  typeof app.bsky.embed.external.$build
+>[0]['external'];
+type ExternalEmbed = ReturnType<typeof app.bsky.embed.external.$build>;
+
+/** Bluesky through the official SDK (`@bsky/sdk` + `@atproto/lex`). */
 @Injectable()
 export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> {
   readonly platform = Platform.Bluesky;
@@ -43,147 +36,116 @@ export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> 
     lengthUnit: 'graphemes',
     supportsMetrics: true,
     contentStyle:
-      'Short, conversational text post. Links and #hashtags become clickable.',
+      'Short, conversational text post. Links, @mentions and #hashtags become clickable, and the first link gets a preview card.',
   };
 
-  private readonly sessions = new Map<
-    string,
-    { session: BlueskySession; expiresAt: number }
-  >();
+  constructor(
+    private readonly clients: BlueskyClientFactory,
+    private readonly previews: LinkPreviewService,
+  ) {}
 
   parseCredentials(raw: unknown): Promise<BlueskyCredentialsDto> {
     return parseCredentialsDto(BlueskyCredentialsDto, raw);
   }
 
   async verify(credentials: BlueskyCredentialsDto): Promise<VerifiedAccount> {
-    const session = await this.getSession(credentials, true);
-    const profile = await requestJson<BlueskyProfile>(
-      `${APPVIEW}/xrpc/app.bsky.actor.getProfile`,
-      { query: { actor: session.did } },
-    );
-    return {
-      externalId: profile.did,
-      handle: profile.handle,
-      displayName: profile.displayName || profile.handle,
-      profileUrl: `https://bsky.app/profile/${profile.handle}`,
-      avatarUrl: profile.avatar,
-    };
+    await this.clients.login(credentials);
+    return this.clients.withClient(credentials, async (client, session) => {
+      const profile = await client.call(app.bsky.actor.getProfile, {
+        actor: session.did,
+      });
+      return {
+        externalId: profile.did,
+        handle: profile.handle,
+        displayName: profile.displayName || profile.handle,
+        profileUrl: `https://bsky.app/profile/${profile.handle}`,
+        avatarUrl: profile.avatar,
+      };
+    });
   }
 
-  async publish(
+  publish(
     credentials: BlueskyCredentialsDto,
     input: PublishInput,
   ): Promise<PublishResult> {
-    const session = await this.getSession(credentials);
-    const createdAt = new Date();
-    const facets = await this.buildFacets(input.text);
-
-    const record = {
-      $type: 'app.bsky.feed.post',
-      text: input.text,
-      createdAt: createdAt.toISOString(),
-      ...(facets.length > 0 && { facets }),
-    };
-
-    const created = await this.withSessionRetry(credentials, session, (s) =>
-      requestJson<BlueskyCreateRecordResponse>(
-        `${this.service(credentials)}/xrpc/com.atproto.repo.createRecord`,
-        {
-          headers: { authorization: `Bearer ${s.accessJwt}` },
-          json: { repo: s.did, collection: 'app.bsky.feed.post', record },
-        },
-      ),
-    );
-
-    const rkey = created.uri.split('/').pop();
-    return {
-      externalId: created.uri,
-      externalUrl: `https://bsky.app/profile/${session.handle}/post/${rkey}`,
-      publishedAt: createdAt,
-    };
+    return this.clients.withClient(credentials, async (client, session) => {
+      const rt = new RichText({ text: input.text });
+      await rt.detectFacets(client);
+      const embed = await this.linkCard(client, rt);
+      const createdAt = currentDatetimeString();
+      const { uri } = await client.call(post, {
+        text: rt.text,
+        createdAt,
+        ...(rt.facets?.length && { facets: rt.facets }),
+        ...(embed && { embed }),
+      });
+      const rkey = uri.split('/').pop();
+      return {
+        externalId: uri,
+        externalUrl: `https://bsky.app/profile/${session.handle}/post/${rkey}`,
+        publishedAt: new Date(createdAt),
+      };
+    });
   }
 
-  async fetchMetrics(
-    _credentials: BlueskyCredentialsDto,
+  fetchMetrics(
+    credentials: BlueskyCredentialsDto,
     externalIds: string[],
   ): Promise<Map<string, PostMetrics>> {
-    const result = new Map<string, PostMetrics>();
-    for (let i = 0; i < externalIds.length; i += GET_POSTS_BATCH) {
-      const { posts } = await requestJson<BlueskyGetPostsResponse>(
-        `${APPVIEW}/xrpc/app.bsky.feed.getPosts`,
-        { query: { uris: externalIds.slice(i, i + GET_POSTS_BATCH) } },
-      );
-      for (const post of posts) {
-        result.set(post.uri, {
-          likes: post.likeCount,
-          reposts: post.repostCount,
-          replies: post.replyCount,
-          quotes: post.quoteCount,
-          raw: { ...post },
-        });
+    return this.clients.withClient(credentials, async (client) => {
+      const result = new Map<string, PostMetrics>();
+      for (let i = 0; i < externalIds.length; i += GET_POSTS_BATCH) {
+        // Every id we stored came back from createRecord, so it is an AT URI.
+        const uris = externalIds.slice(i, i + GET_POSTS_BATCH) as AtUriString[];
+        const { posts } = await client.call(app.bsky.feed.getPosts, { uris });
+        for (const p of posts) {
+          result.set(p.uri, {
+            likes: p.likeCount,
+            reposts: p.repostCount,
+            replies: p.replyCount,
+            quotes: p.quoteCount,
+            raw: {
+              likeCount: p.likeCount,
+              repostCount: p.repostCount,
+              replyCount: p.replyCount,
+              quoteCount: p.quoteCount,
+              bookmarkCount: p.bookmarkCount,
+            },
+          });
+        }
       }
-    }
-    return result;
+      return result;
+    });
   }
 
-  private service(credentials: BlueskyCredentialsDto): string {
-    return (credentials.service ?? DEFAULT_SERVICE).replace(/\/$/, '');
+  disconnect(credentials: BlueskyCredentialsDto): Promise<void> {
+    return this.clients.logout(credentials);
   }
 
-  private async getSession(
-    credentials: BlueskyCredentialsDto,
-    forceNew = false,
-  ): Promise<BlueskySession> {
-    const key = `${this.service(credentials)}|${credentials.identifier}`;
-    const cached = this.sessions.get(key);
-    if (!forceNew && cached && cached.expiresAt > Date.now()) {
-      return cached.session;
+  // Bluesky doesn't unfurl links itself: the posting client embeds the card.
+  private async linkCard(
+    client: Client,
+    rt: RichText,
+  ): Promise<ExternalEmbed | undefined> {
+    const link = [...rt.segments()].find((s) => s.isLink())?.link?.uri;
+    if (!link) return undefined;
+    const preview = await this.previews.fetch(link);
+    if (!preview) return undefined;
+    let thumb: External['thumb'];
+    if (preview.image) {
+      const { body } = await client.uploadBlob(preview.image.data, {
+        encoding: preview.image.mimeType,
+      });
+      thumb = body.blob;
     }
-    const session = await requestJson<BlueskySession>(
-      `${this.service(credentials)}/xrpc/com.atproto.server.createSession`,
-      {
-        json: {
-          identifier: credentials.identifier,
-          password: credentials.appPassword,
-        },
+    return app.bsky.embed.external.$build({
+      external: {
+        // Parsed by `new URL()` in the preview service, so it is a valid URI.
+        uri: preview.url as External['uri'],
+        title: preview.title.slice(0, 300),
+        description: preview.description.slice(0, 1000),
+        ...(thumb && { thumb }),
       },
-    );
-    this.sessions.set(key, { session, expiresAt: Date.now() + SESSION_TTL_MS });
-    return session;
-  }
-
-  /** Retries once with a fresh session if the cached token was rejected. */
-  private async withSessionRetry<T>(
-    credentials: BlueskyCredentialsDto,
-    session: BlueskySession,
-    call: (session: BlueskySession) => Promise<T>,
-  ): Promise<T> {
-    try {
-      return await call(session);
-    } catch (error) {
-      if (error instanceof PlatformApiError && error.status === 401) {
-        return call(await this.getSession(credentials, true));
-      }
-      throw error;
-    }
-  }
-
-  private async buildFacets(text: string): Promise<BlueskyFacet[]> {
-    const { facets, mentions } = detectFacets(text);
-    for (const mention of mentions) {
-      try {
-        const { did } = await requestJson<{ did: string }>(
-          `${APPVIEW}/xrpc/com.atproto.identity.resolveHandle`,
-          { query: { handle: mention.handle } },
-        );
-        facets.push({
-          index: mention.index,
-          features: [{ $type: 'app.bsky.richtext.facet#mention', did }],
-        });
-      } catch {
-        // Unknown handle: leave it as plain text rather than fail the post.
-      }
-    }
-    return facets.sort((a, b) => a.index.byteStart - b.index.byteStart);
+    });
   }
 }

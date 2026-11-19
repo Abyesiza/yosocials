@@ -25,8 +25,11 @@ export class FeedService {
     private readonly targets: Repository<PostTarget>,
   ) {}
 
-  async feed(query: FeedQueryDto): Promise<Paginated<FeedItemDto>> {
-    const qb = this.base(query.platform)
+  async feed(
+    workspaceId: string,
+    query: FeedQueryDto,
+  ): Promise<Paginated<FeedItemDto>> {
+    const qb = this.base(workspaceId, query.platform)
       .andWhere('t.status = :published', { published: TargetStatus.Published })
       .orderBy('t.publishedAt', 'DESC')
       .skip(query.offset)
@@ -43,14 +46,17 @@ export class FeedService {
     };
   }
 
-  async calendar(query: CalendarQueryDto): Promise<FeedItemDto[]> {
+  async calendar(
+    workspaceId: string,
+    query: CalendarQueryDto,
+  ): Promise<FeedItemDto[]> {
     const days = (query.to.getTime() - query.from.getTime()) / 86_400_000;
     if (days <= 0 || days > MAX_CALENDAR_DAYS) {
       throw new BadRequestException(
         `"to" must be after "from" and at most ${MAX_CALENDAR_DAYS} days later`,
       );
     }
-    const rows = await this.base(query.platform)
+    const rows = await this.base(workspaceId, query.platform)
       .andWhere(
         new Brackets((w) =>
           w
@@ -64,11 +70,15 @@ export class FeedService {
     return rows.map((t) => this.toItem(t));
   }
 
-  private base(platform?: Platform): SelectQueryBuilder<PostTarget> {
+  private base(
+    workspaceId: string,
+    platform?: Platform,
+  ): SelectQueryBuilder<PostTarget> {
     const qb = this.targets
       .createQueryBuilder('t')
       .innerJoinAndSelect('t.post', 'p')
-      .innerJoinAndSelect('t.account', 'a');
+      .innerJoinAndSelect('t.account', 'a')
+      .where('p.workspaceId = :workspaceId', { workspaceId });
     if (platform) qb.andWhere('a.platform = :platform', { platform });
     return qb;
   }

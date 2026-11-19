@@ -1,9 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from '@nestjs/authentication';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PlatformInfoDto } from './dto/platform-info.dto.js';
 import { IntegrationsRegistry } from './integrations.registry.js';
 
 @ApiTags('integrations')
+@Public()
 @Controller('integrations')
 export class IntegrationsController {
   constructor(private readonly registry: IntegrationsRegistry) {}

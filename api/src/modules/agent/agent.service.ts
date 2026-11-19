@@ -36,6 +36,9 @@ import {
   variantsPrompt,
 } from './prompts/prompts.js';
 
+/** Earliest a planned post may go out, from now. */
+const MIN_LEAD_MS = 10 * 60_000;
+
 /**
  * The planning agent. It only ever creates drafts: nothing it writes is
  * published until a person schedules or publishes it.
@@ -51,11 +54,18 @@ export class AgentService {
     private readonly registry: IntegrationsRegistry,
   ) {}
 
-  async planCalendar(dto: PlanCalendarDto): Promise<PlanCalendarResponseDto> {
-    const contexts = await this.loadContexts(dto.accountIds);
+  async planCalendar(
+    workspaceId: string,
+    dto: PlanCalendarDto,
+  ): Promise<PlanCalendarResponseDto> {
+    const contexts = await this.loadContexts(workspaceId, dto.accountIds);
     const byId = new Map(contexts.map((c) => [c.account.id, c]));
-    const start = dto.startDate;
-    const end = new Date(start.getTime() + dto.days * 86_400_000);
+    // Never plan into the past: a window starting "today" begins at midnight,
+    // and an approved past time would publish the moment it's scheduled.
+    const start = new Date(
+      Math.max(dto.startDate.getTime(), Date.now() + MIN_LEAD_MS),
+    );
+    const end = new Date(dto.startDate.getTime() + dto.days * 86_400_000);
 
     const output = await this.ask(ModelCalendarOutput, {
       prompt: calendarPrompt({
@@ -96,6 +106,7 @@ export class AgentService {
       if (targets.length === 0) continue;
 
       const post = await this.posts.create(
+        workspaceId,
         {
           title: planned.title,
           body: planned.idea,
@@ -117,9 +128,10 @@ export class AgentService {
   }
 
   async draftVariants(
+    workspaceId: string,
     dto: DraftVariantsDto,
   ): Promise<DraftVariantsResponseDto> {
-    const contexts = await this.loadContexts(dto.accountIds);
+    const contexts = await this.loadContexts(workspaceId, dto.accountIds);
     const output = await this.ask(ModelVariantsOutput, {
       prompt: variantsPrompt(dto.idea, contexts),
       jsonSchema: VARIANTS_SCHEMA,
@@ -140,8 +152,11 @@ export class AgentService {
     return { model: this.model.modelName, variants };
   }
 
-  private async loadContexts(accountIds: string[]): Promise<AccountContext[]> {
-    const accounts = await this.accounts.findMany(accountIds);
+  private async loadContexts(
+    workspaceId: string,
+    accountIds: string[],
+  ): Promise<AccountContext[]> {
+    const accounts = await this.accounts.findMany(workspaceId, accountIds);
     return accounts.map((account) => {
       const provider = this.registry.get(account.platform);
       return {

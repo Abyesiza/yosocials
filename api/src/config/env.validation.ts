@@ -64,12 +64,33 @@ export class EnvironmentVariables {
   @MinLength(44)
   CREDENTIALS_ENCRYPTION_KEY: string;
 
+  /**
+   * Signs access tokens (HS256). 32+ random bytes, base64 encoded; generate
+   * it the same way as CREDENTIALS_ENCRYPTION_KEY. Changing it signs
+   * everyone out.
+   */
+  @IsString()
+  @MinLength(44)
+  JWT_SECRET: string;
+
+  /** Sign-in/sign-up attempts allowed per IP per minute. */
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  AUTH_RATE_LIMIT_PER_MINUTE = 10;
+
   @IsOptional()
   @IsString()
   GEMINI_API_KEY?: string;
 
+  /** First model the agent tries. */
   @IsString()
-  GEMINI_MODEL = 'gemini-3.8-flash';
+  GEMINI_MODEL = 'gemini-3.5-flash-lite';
+
+  /** Comma-separated models to try, in order, when one is overloaded or slow. */
+  @IsOptional()
+  @IsString()
+  GEMINI_FALLBACK_MODELS?: string = 'gemini-3.8-flash';
 
   /** Turn the publish/metrics cron jobs off, e.g. on extra API replicas. */
   @Transform(toBoolean)

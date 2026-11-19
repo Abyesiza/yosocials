@@ -12,6 +12,7 @@ You plan and write posts for the accounts you are given. Rules:
 - Write natively for each platform: respect its length limit and style. Never exceed a limit.
 - Match each account's persona and brand voice.
 - Do not invent facts, statistics, prices, dates or quotes that are not in the brief.
+- Only include links, @mentions and URLs that appear in the brief. Never make up a link (no example.com).
 - No hashtag stuffing: at most 3 relevant hashtags, and only where the platform uses them.
 - Return only JSON matching the schema.`;
 
