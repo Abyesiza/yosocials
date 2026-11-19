@@ -18,7 +18,7 @@ const features = [
     Icon: TrendingUp,
     title: "Real-Time Trend Spotting",
     description:
-      "Scans trending audio, topics, and formats on Instagram and X, then matches them to your niche with ready-to-approve draft posts.",
+      "Scans trending audio, topics, and formats across your platforms, then matches them to your niche with ready-to-approve draft posts.",
     badge: "bg-amber-600",
   },
   {
@@ -61,7 +61,7 @@ export default function Home() {
             The autonomous AI agent that drafts, schedules, and grows your
             presence across every platform.
           </p>
-          <div className="flex items-center gap-5 pt-2">
+          <div className="flex max-w-2xl flex-wrap items-center justify-center gap-5 pt-2">
             {Object.values(platforms).map(({ Icon, label, color }) => (
               <Icon key={label} title={label} color={color} className="h-6 w-6" />
             ))}

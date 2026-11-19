@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     rules: {
       "*.css": {
+        // Without this condition the rule also catches *.module.css, which
+        // then compiles as global CSS and its class names come back empty.
+        condition: { not: { path: /\.module\.css$/ } },
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },

@@ -28,7 +28,7 @@ const week: CalendarDay[] = [
     day: "Wed",
     date: "14",
     items: [{ platform: "whatsapp", title: "Status: weekly tip", time: "6:00 PM" },
-            {platform: "facebook", title: "Facebook update", time:"7:00PM"}
+            {platform: "facebook", title: "Event: live Q&A", time: "7:00 PM"}
     ],
   },
   {
@@ -43,8 +43,8 @@ const week: CalendarDay[] = [
       },
       {
         platform: "linkedin",
-        title: "Just some linkedin",
-        time: "2:00AM"
+        title: "Article: industry insight",
+        time: "2:00 PM"
       }
     ],
   },
@@ -89,10 +89,10 @@ export default function ContentCalendar() {
               <div className="text-sm font-bold text-black">
                 {day} <span className="text-zinc-500">{date}</span>
               </div>
-              {items.map(({ platform, title, time, status }) => {
+              {items.map(({ platform, title, time, status }, i) => {
                 const { Icon, label, color } = platforms[platform];
                 return (
-                  <div key={title} className="rounded-xl bg-zinc-50 p-3">
+                  <div key={i} className="rounded-xl bg-zinc-50 p-3">
                     <Icon title={label} color={color} className="h-4 w-4" />
                     <p className="mt-2 text-sm font-semibold leading-5 text-black">
                       {title}
