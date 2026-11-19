@@ -51,10 +51,10 @@ export class EnvironmentVariables {
   @IsBoolean()
   DATABASE_SSL = false;
 
-  /** Run pending migrations when the app starts. */
+  /** Run pending migrations at startup; disabled by default on Vercel. */
   @Transform(toBoolean)
   @IsBoolean()
-  DATABASE_RUN_MIGRATIONS = true;
+  DATABASE_RUN_MIGRATIONS = process.env.VERCEL !== '1';
 
   /**
    * 32-byte key, base64 encoded, used to encrypt platform credentials at rest.

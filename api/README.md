@@ -10,7 +10,11 @@ npm install
 npm run start:dev           # http://localhost:4000/api, docs at /api/docs
 ```
 
-Migrations run automatically on start (`DATABASE_RUN_MIGRATIONS=true`).
+Locally, migrations run automatically on start (`DATABASE_RUN_MIGRATIONS=true`).
+On Vercel, automatic migrations default to off to avoid concurrent migration
+attempts from serverless cold starts. Apply production migrations once per
+release from the API project root with `npm run migration:run` and the
+production database environment variables.
 
 No Postgres yet? `npm run db:local` starts an in-memory one on port 5433. Point `DATABASE_URL` at `postgres://postgres:postgres@127.0.0.1:5433/postgres`. Its data is lost when it stops.
 
