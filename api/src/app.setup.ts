@@ -6,9 +6,14 @@ import type { EnvironmentVariables } from './config/env.validation.js';
 /** Global app setup, shared by main.ts and the e2e tests. */
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService<EnvironmentVariables, true>);
+  const webOrigins = config
+    .get('WEB_ORIGIN', { infer: true })
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   app.setGlobalPrefix('api');
-  app.enableCors({ origin: config.get('WEB_ORIGIN', { infer: true }) });
+  app.enableCors({ origin: webOrigins });
   app.enableShutdownHooks();
   app.useGlobalPipes(
     new ValidationPipe({

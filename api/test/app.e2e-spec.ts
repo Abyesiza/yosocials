@@ -136,6 +136,18 @@ afterEach(() => vi.unstubAllGlobals());
 afterAll(() => t?.close());
 
 describe('Yo Socials API', () => {
+  it('allows the deployed frontend origin through CORS', async () => {
+    await http
+      .options('/api/health')
+      .set('Origin', 'https://yosocials.vercel.app')
+      .set('Access-Control-Request-Method', 'POST')
+      .expect(204)
+      .expect(
+        'Access-Control-Allow-Origin',
+        'https://yosocials.vercel.app',
+      );
+  });
+
   it('reports healthy with migrations applied', async () => {
     await http.get('/api/health').expect(200, { status: 'ok', database: 'up' });
     const tables: { table_name: string }[] = await t.dataSource.query(

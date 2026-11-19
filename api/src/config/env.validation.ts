@@ -38,7 +38,7 @@ export class EnvironmentVariables {
 
   /** Origin of the Next.js web app, allowed through CORS. */
   @IsString()
-  WEB_ORIGIN = 'http://localhost:3000';
+  WEB_ORIGIN = 'http://localhost:3000,https://yosocials.vercel.app';
 
   /** Postgres connection string, e.g. postgres://user:pass@host:5432/db */
   @IsString()
