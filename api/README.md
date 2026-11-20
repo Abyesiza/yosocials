@@ -16,6 +16,11 @@ attempts from serverless cold starts. Apply production migrations once per
 release from the API project root with `npm run migration:run` and the
 production database environment variables.
 
+On Vercel the database connection fails fast (10s timeout, one retry) so a
+misconfiguration shows up in the function logs instead of as a slow cold start.
+`DATABASE_SSL=true` verifies the server certificate strictly, which the
+Supabase pooler's self-signed chain fails; keep it `false` for Supabase.
+
 No Postgres yet? `npm run db:local` starts an in-memory one on port 5433. Point `DATABASE_URL` at `postgres://postgres:postgres@127.0.0.1:5433/postgres`. Its data is lost when it stops.
 
 ## Auth and workspaces
