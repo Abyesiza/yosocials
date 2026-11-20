@@ -19,7 +19,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottleGuard } from '../../common/throttle/throttle.guard.js';
 import {
   ChangePasswordDto,
   UpdateProfileDto,
@@ -46,7 +46,7 @@ import {
 /** Sign-up, sign-in and token rotation. Rate limited per IP. */
 @ApiTags('auth')
 @Public()
-@UseGuards(ThrottlerGuard)
+@UseGuards(ThrottleGuard)
 @ApiTooManyRequestsResponse({ description: 'Too many attempts; wait a minute' })
 @Controller('auth')
 export class AuthController {
@@ -103,7 +103,7 @@ export class MeController {
   /** Deletes the account, its sessions, and workspaces where it is the only member. */
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottleGuard)
   @ApiNoContentResponse()
   remove(
     @CurrentUser() user: User,
@@ -136,7 +136,7 @@ export class MeController {
   /** Signs out every device and returns fresh tokens for this one. */
   @Post('password')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottleGuard)
   @ApiOkResponse({ type: AuthTokensDto })
   changePassword(
     @CurrentUser() user: User,
