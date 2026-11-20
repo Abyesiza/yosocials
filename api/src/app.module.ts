@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthenticationModule } from '@nestjs/authentication';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { CryptoModule } from './common/crypto/crypto.module.js';
 import {
   type EnvironmentVariables,
@@ -44,15 +43,6 @@ const AUDIENCE = 'yo-socials';
         },
         refreshToken: { ttl: '30d', absoluteTtl: '90d' },
       }),
-    }),
-    ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService<EnvironmentVariables, true>) => [
-        {
-          ttl: 60_000,
-          limit: config.get('AUTH_RATE_LIMIT_PER_MINUTE', { infer: true }),
-        },
-      ],
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,
