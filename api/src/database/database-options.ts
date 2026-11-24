@@ -1,11 +1,13 @@
 import type { DataSourceOptions } from 'typeorm';
+
+type PostgresConnectionOptions = Extract<DataSourceOptions, { type: 'postgres' }>;
 import { ENTITIES } from './entities.js';
 import { MIGRATIONS } from './migrations/index.js';
 
 export function databaseOptions(env: {
   DATABASE_URL: string;
   DATABASE_SSL: boolean;
-}): DataSourceOptions {
+}): PostgresConnectionOptions {
   return {
     type: 'postgres',
     url: env.DATABASE_URL,
