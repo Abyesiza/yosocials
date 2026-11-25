@@ -51,10 +51,10 @@ export class EnvironmentVariables {
   @IsBoolean()
   DATABASE_SSL = false;
 
-  /** Run pending migrations at startup; disabled by default on Vercel. */
+  /** Run pending migrations at startup. Always off on Vercel. */
   @Transform(toBoolean)
   @IsBoolean()
-  DATABASE_RUN_MIGRATIONS = process.env.VERCEL !== '1';
+  DATABASE_RUN_MIGRATIONS = true;
 
   /**
    * 32-byte key, base64 encoded, used to encrypt platform credentials at rest.
@@ -92,7 +92,10 @@ export class EnvironmentVariables {
   @IsString()
   GEMINI_FALLBACK_MODELS?: string = 'gemini-3.8-flash';
 
-  /** Turn the publish/metrics cron jobs off, e.g. on extra API replicas. */
+  /**
+   * Turn the publish/metrics cron jobs off, e.g. on extra API replicas.
+   * Always off on Vercel.
+   */
   @Transform(toBoolean)
   @IsBoolean()
   SCHEDULER_ENABLED = true;
@@ -112,5 +115,18 @@ export function validateEnv(
       .join('\n  - ');
     throw new Error(`Invalid environment configuration:\n  - ${details}`);
   }
+  if (isServerless()) {
+    // A Vercel function is a short-lived, concurrent instance: migrating on
+    // every cold start races other instances and delays the first request,
+    // and in-process cron never fires while the function sleeps. Force both
+    // off even when copied env says otherwise; run migrations from the CLI.
+    validated.DATABASE_RUN_MIGRATIONS = false;
+    validated.SCHEDULER_ENABLED = false;
+  }
   return validated;
+}
+
+/** True inside a Vercel function. */
+export function isServerless(): boolean {
+  return process.env.VERCEL === '1';
 }

@@ -11,10 +11,11 @@ npm run start:dev           # http://localhost:4000/api, docs at /api/docs
 ```
 
 Locally, migrations run automatically on start (`DATABASE_RUN_MIGRATIONS=true`).
-On Vercel, automatic migrations default to off to avoid concurrent migration
-attempts from serverless cold starts. Apply production migrations once per
-release from the API project root with `npm run migration:run` and the
-production database environment variables.
+On Vercel, automatic migrations and the publish/metrics cron jobs are always
+off, whatever `DATABASE_RUN_MIGRATIONS` and `SCHEDULER_ENABLED` say: cold
+starts would race each other migrating, and cron never fires while a function
+sleeps. Apply production migrations once per release from the API project root
+with `npm run migration:run` and the production database environment variables.
 
 On Vercel the database connection fails fast (10s timeout, one retry) so a
 misconfiguration shows up in the function logs instead of as a slow cold start.
