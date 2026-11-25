@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CryptoModule } from './common/crypto/crypto.module.js';
 import {
   type EnvironmentVariables,
+  isServerless,
   validateEnv,
 } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -44,7 +45,8 @@ const AUDIENCE = 'yo-socials';
         refreshToken: { ttl: '30d', absoluteTtl: '90d' },
       }),
     }),
-    ScheduleModule.forRoot(),
+    // No cron timers in a serverless function: it sleeps between requests.
+    ...(isServerless() ? [] : [ScheduleModule.forRoot()]),
     DatabaseModule,
     CryptoModule,
     UsersModule,

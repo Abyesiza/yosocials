@@ -36,7 +36,22 @@ export function ConnectForm({ platform, onDone }: { platform: Platform; onDone: 
           <PlatformIcon platform={platform} size={20} />
           <h3 className="font-semibold text-foreground">Connect {platformLabel(platform)}</h3>
         </div>
-        <p className="text-sm text-muted-foreground">{spec.help}</p>
+        <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
+          <p className="font-medium text-foreground">{spec.intro}</p>
+          <ol className="list-decimal space-y-1.5 pl-5 text-muted-foreground marker:font-semibold marker:text-foreground">
+            {spec.steps.map((step) => <li key={step}>{step}</li>)}
+          </ol>
+          {spec.tips && (
+            <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+              {spec.tips.map((tip) => <li key={tip}>{tip}</li>)}
+            </ul>
+          )}
+          {spec.link && (
+            <a href={spec.link.href} target="_blank" rel="noopener noreferrer" className="inline-block font-medium text-foreground underline underline-offset-4">
+              {spec.link.label} ↗
+            </a>
+          )}
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           {spec.fields.map((f) => (
             <Field key={f.name} label={f.label} error={errors.credentials?.[f.name]?.message}>
