@@ -15,12 +15,11 @@ async function bootstrap() {
   await app.listen(config.get('PORT', { infer: true }));
 }
 
-try {
-  await bootstrap();
-} catch (error) {
-  // console.error is always captured by Vercel's function logs, even when
-  // the process dies straight after.
+// Not awaited at the top level: Vercel's launcher waits for this module to
+// finish loading before it completes app.listen(), so awaiting the bootstrap
+// here deadlocks and the function is killed for an initialization timeout.
+bootstrap().catch((error: unknown) => {
+  // console.error is always captured by Vercel's function logs.
   console.error('API failed to start:', error);
-  process.exitCode = 1;
-  throw error;
-}
+  process.exit(1);
+});
