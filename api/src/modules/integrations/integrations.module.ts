@@ -10,6 +10,8 @@ import { BlueskyProvider } from './providers/bluesky/bluesky.provider.js';
 import { DiscordProvider } from './providers/discord/discord.provider.js';
 import { MastodonProvider } from './providers/mastodon/mastodon.provider.js';
 import { TelegramProvider } from './providers/telegram/telegram.provider.js';
+import { TikTokApi } from './providers/tiktok/tiktok-api.js';
+import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProviderSession])],
@@ -22,6 +24,8 @@ import { TelegramProvider } from './providers/telegram/telegram.provider.js';
     MastodonProvider,
     TelegramProvider,
     DiscordProvider,
+    TikTokApi,
+    TikTokProvider,
     IntegrationsRegistry,
   ],
   exports: [IntegrationsRegistry],

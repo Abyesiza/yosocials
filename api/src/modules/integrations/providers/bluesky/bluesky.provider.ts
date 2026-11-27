@@ -37,6 +37,7 @@ export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> 
     supportsMetrics: true,
     contentStyle:
       'Short, conversational text post. Links, @mentions and #hashtags become clickable, and the first link gets a preview card.',
+    connect: 'credentials',
   };
 
   constructor(

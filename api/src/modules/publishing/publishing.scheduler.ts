@@ -34,6 +34,13 @@ export class PublishingScheduler {
     });
   }
 
+  @Cron('30 * * * * *')
+  syncProcessing(): Promise<void> {
+    return this.once('sync', async () => {
+      await this.publishing.syncProcessing();
+    });
+  }
+
   @Cron('0 */15 * * * *')
   collectMetrics(): Promise<void> {
     return this.once('metrics', async () => {

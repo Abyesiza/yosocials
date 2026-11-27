@@ -5,6 +5,7 @@ import { BlueskyProvider } from './providers/bluesky/bluesky.provider.js';
 import { DiscordProvider } from './providers/discord/discord.provider.js';
 import { MastodonProvider } from './providers/mastodon/mastodon.provider.js';
 import { TelegramProvider } from './providers/telegram/telegram.provider.js';
+import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
 
 /** Looks up the provider for a platform. The single place providers are listed. */
 @Injectable()
@@ -16,8 +17,15 @@ export class IntegrationsRegistry {
     mastodon: MastodonProvider,
     telegram: TelegramProvider,
     discord: DiscordProvider,
+    tiktok: TikTokProvider,
   ) {
-    const list: PlatformProvider[] = [bluesky, mastodon, telegram, discord];
+    const list: PlatformProvider[] = [
+      bluesky,
+      mastodon,
+      telegram,
+      discord,
+      tiktok,
+    ];
     this.providers = new Map(list.map((p) => [p.platform, p]));
 
     const missing = Object.values(Platform).filter(

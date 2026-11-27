@@ -8,7 +8,8 @@ export interface CredentialSpec {
   fields: { name: string; label: string; placeholder: string; secret?: boolean }[];
 }
 
-export const CREDENTIAL_FIELDS: Record<Platform, CredentialSpec> = {
+/** Platforms that connect by pasting credentials; OAuth platforms (TikTok) sign in instead. */
+export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
   bluesky: {
     intro: "Bluesky connects with your handle and an app password. Never use your main password.",
     steps: [

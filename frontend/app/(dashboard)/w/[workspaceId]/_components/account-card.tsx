@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LuRefreshCw, LuTrash2 } from "react-icons/lu";
+import { LuExternalLink, LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { Avatar, Badge, Button, Card, ErrorNote, PlatformIcon } from "@/app/components/ui";
 import { api } from "@/app/lib/api/client";
 import type { Account, AccountPersona } from "@/app/lib/api/types";
@@ -42,6 +42,11 @@ export function AccountCard({ account, onChange }: { account: Account; onChange:
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-foreground">{account.displayName}</p>
           <p className="truncate text-sm text-muted-foreground">{account.handle} · {PERSONA[account.persona]}</p>
+          {account.profileUrl && (
+            <a href={account.profileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-primary hover:underline sm:min-h-0">
+              View profile <LuExternalLink className="h-3 w-3" aria-hidden />
+            </a>
+          )}
         </div>
         {account.status === "needs_reconnect" ? <Badge variant="destructive">Reconnect</Badge> : <Badge variant="success">Connected</Badge>}
       </div>

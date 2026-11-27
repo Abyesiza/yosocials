@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -15,8 +16,11 @@ import {
   ApiExtraModels,
   ApiNoContentResponse,
   ApiOkResponse,
+  ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Platform } from '../../common/enums/platform.enum.js';
 import {
   CurrentWorkspace,
   RequireRole,
@@ -30,6 +34,7 @@ import {
   ConnectAccountDto,
   CREDENTIAL_DTOS,
 } from './dto/connect-account.dto.js';
+import { OAuthCallbackDto, OAuthStartResponseDto } from './dto/oauth.dto.js';
 import { UpdateAccountDto } from './dto/update-account.dto.js';
 
 /** Viewers can see accounts; only admins connect, edit or remove them. */
@@ -52,6 +57,38 @@ export class AccountsController {
     );
   }
 
+  @Post('oauth/:platform/start')
+  @RequireRole(WorkspaceRole.Admin)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Start connecting an account through the platform’s sign-in',
+  })
+  @ApiParam({ name: 'platform', enum: Platform })
+  @ApiOkResponse({ type: OAuthStartResponseDto })
+  startOAuth(
+    @CurrentWorkspace() ws: WorkspaceContext,
+    @Param('platform', new ParseEnumPipe(Platform)) platform: Platform,
+  ): OAuthStartResponseDto {
+    return this.accounts.startOAuth(ws, platform);
+  }
+
+  @Post('oauth/:platform/callback')
+  @RequireRole(WorkspaceRole.Admin)
+  @ApiOperation({
+    summary: 'Finish the sign-in with the code the platform returned',
+  })
+  @ApiParam({ name: 'platform', enum: Platform })
+  @ApiCreatedResponse({ type: AccountResponseDto })
+  async finishOAuth(
+    @CurrentWorkspace() ws: WorkspaceContext,
+    @Param('platform', new ParseEnumPipe(Platform)) platform: Platform,
+    @Body() dto: OAuthCallbackDto,
+  ): Promise<AccountResponseDto> {
+    return AccountResponseDto.from(
+      await this.accounts.finishOAuth(ws, platform, dto.code, dto.state),
+    );
+  }
+
   @Get()
   @ApiOkResponse({ type: [AccountResponseDto] })
   async findAll(
@@ -71,6 +108,19 @@ export class AccountsController {
     return AccountResponseDto.from(
       await this.accounts.findOne(ws.workspaceId, id),
     );
+  }
+
+  @Get(':id/creator-info')
+  @RequireRole(WorkspaceRole.Editor)
+  @ApiOperation({
+    summary:
+      'Live posting details for the account (TikTok creator info: privacy options, limits)',
+  })
+  creatorInfo(
+    @CurrentWorkspace() ws: WorkspaceContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<object> {
+    return this.accounts.creatorInfo(ws.workspaceId, id);
   }
 
   @Patch(':id')

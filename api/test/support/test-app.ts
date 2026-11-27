@@ -42,6 +42,12 @@ export async function startTestApp(): Promise<TestApp> {
     AUTH_RATE_LIMIT_PER_MINUTE: '10000',
     GEMINI_API_KEY: '',
     SCHEDULER_ENABLED: 'false',
+    TIKTOK_CLIENT_KEY: 'test-client-key',
+    TIKTOK_CLIENT_SECRET: 'test-client-secret',
+    TIKTOK_REDIRECT_URI: 'https://abysocials.test/integrations/tiktok/callback',
+    SUPABASE_URL: 'https://supabase.test',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+    MEDIA_PUBLIC_BASE_URL: 'https://abysocials.test/media',
   });
 
   // Imported after env is set: ConfigModule validates env at import time.

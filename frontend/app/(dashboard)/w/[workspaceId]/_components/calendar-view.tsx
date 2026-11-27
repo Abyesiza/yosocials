@@ -13,6 +13,7 @@ const DOT: Record<TargetStatus, string> = {
   draft: "bg-muted-foreground",
   scheduled: "bg-primary",
   publishing: "bg-warning",
+  processing: "bg-warning",
   published: "bg-success",
   failed: "bg-destructive",
 };

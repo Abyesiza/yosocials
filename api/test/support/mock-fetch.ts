@@ -7,7 +7,12 @@ export interface RecordedRequest {
   body: unknown;
 }
 
-type Handler = (req: RecordedRequest) => { status?: number; body?: unknown };
+type Handler = (req: RecordedRequest) => {
+  status?: number;
+  body?: unknown;
+  /** Sent as-is instead of JSON-encoding `body`. */
+  raw?: string;
+};
 
 function headersOf(init: HeadersInit | undefined): Record<string, string> {
   return Object.fromEntries(new Headers(init).entries());
@@ -23,7 +28,7 @@ async function bodyOf(
   return new Uint8Array(await new Response(raw).arrayBuffer());
 }
 
-/** Replaces global fetch with a router over `METHOD host/path` keys; unmatched requests fail loudly. */
+/** Replaces global fetch with a router over `METHOD host/path` keys (or `…/*` prefixes); unmatched requests fail loudly. */
 export function mockFetch(routes: Record<string, Handler>) {
   const calls: RecordedRequest[] = [];
   const fn: Mock = vi.fn(
@@ -50,11 +55,16 @@ export function mockFetch(routes: Record<string, Handler>) {
       };
       calls.push(req);
       const key = `${req.method} ${url.host}${url.pathname}`;
-      const handler = routes[key];
+      // Keys ending in `*` match any path with that prefix.
+      const handler =
+        routes[key] ??
+        Object.entries(routes).find(
+          ([k]) => k.endsWith('*') && key.startsWith(k.slice(0, -1)),
+        )?.[1];
       if (!handler) throw new Error(`Unexpected request: ${key}`);
-      const { status = 200, body: payload } = handler(req);
+      const { status = 200, body: payload, raw: rawBody } = handler(req);
       return new Response(
-        payload === undefined ? null : JSON.stringify(payload),
+        rawBody ?? (payload === undefined ? null : JSON.stringify(payload)),
         {
           status,
           headers: { 'content-type': 'application/json' },

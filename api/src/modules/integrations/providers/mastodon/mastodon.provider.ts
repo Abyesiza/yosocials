@@ -27,6 +27,7 @@ export class MastodonProvider implements PlatformProvider<MastodonCredentialsDto
     supportsMetrics: true,
     contentStyle:
       'Text post (a "toot"). Community prefers CamelCase #hashtags and content warnings for sensitive topics.',
+    connect: 'credentials',
   };
 
   parseCredentials(raw: unknown): Promise<MastodonCredentialsDto> {

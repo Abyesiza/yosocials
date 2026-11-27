@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { IntegrationsModule } from '../integrations/integrations.module.js';
 import { AccountsController } from './accounts.controller.js';
 import { AccountsService } from './accounts.service.js';
+import { OAuthStateService } from './oauth-state.service.js';
 import { SocialAccount } from './entities/social-account.entity.js';
 
 @Module({
@@ -13,7 +14,7 @@ import { SocialAccount } from './entities/social-account.entity.js';
     IntegrationsModule,
   ],
   controllers: [AccountsController],
-  providers: [AccountsService],
+  providers: [AccountsService, OAuthStateService],
   exports: [AccountsService],
 })
 export class AccountsModule {}

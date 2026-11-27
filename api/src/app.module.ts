@@ -3,6 +3,7 @@ import { AuthenticationModule } from '@nestjs/authentication';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CryptoModule } from './common/crypto/crypto.module.js';
+import { StorageModule } from './common/storage/storage.module.js';
 import {
   type EnvironmentVariables,
   isServerless,
@@ -49,6 +50,7 @@ const AUDIENCE = 'yo-socials';
     ...(isServerless() ? [] : [ScheduleModule.forRoot()]),
     DatabaseModule,
     CryptoModule,
+    StorageModule,
     UsersModule,
     AuthModule,
     WorkspacesModule,

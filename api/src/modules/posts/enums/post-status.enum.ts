@@ -6,6 +6,8 @@ export enum TargetStatus {
   Scheduled = 'scheduled',
   /** Claimed by a worker and being sent right now. */
   Publishing = 'publishing',
+  /** Accepted by a platform that finishes publishing on its own time (TikTok). */
+  Processing = 'processing',
   Published = 'published',
   Failed = 'failed',
 }
@@ -31,7 +33,9 @@ export function derivePostStatus(statuses: TargetStatus[]): PostStatus {
     statuses.length > 0 && statuses.every((x) => x === s);
 
   if (all(TargetStatus.Published)) return PostStatus.Published;
-  if (has(TargetStatus.Publishing)) return PostStatus.Publishing;
+  if (has(TargetStatus.Publishing) || has(TargetStatus.Processing)) {
+    return PostStatus.Publishing;
+  }
   if (has(TargetStatus.Published)) return PostStatus.PartiallyPublished;
   if (has(TargetStatus.Failed)) return PostStatus.Failed;
   if (has(TargetStatus.Scheduled)) return PostStatus.Scheduled;

@@ -6,11 +6,13 @@ import { LuSparkles } from "react-icons/lu";
 import { Button, ButtonLink, Card, EmptyState, ErrorNote, PageHeader, Textarea } from "@/app/components/ui";
 import { FormSkeleton } from "@/app/components/skeletons";
 import { api, useApi } from "@/app/lib/api/client";
-import type { Account, PlatformInfo, Post, PublishOutcome, VariantsResult } from "@/app/lib/api/types";
+import type { Account, PlatformInfo, Post, PublishOutcome, TikTokOptions, VariantsResult } from "@/app/lib/api/types";
 import { graphemes, toLocalInput } from "@/app/lib/format";
 import { AccountPicker } from "./account-picker";
+import { MediaPicker, toMediaBody, type DraftMedia } from "./media-picker";
 import { lengthFor, PlatformPreview } from "./platform-preview";
 import { RoleGate } from "./role-gate";
+import { tiktokIssues, TikTokSettings, useDisclosure, type MediaSummary } from "./tiktok-settings";
 import { WhenPicker, type When } from "./when-picker";
 import { useWorkspace } from "./workspace-context";
 
@@ -35,6 +37,9 @@ function Composer() {
   const [selected, setSelected] = useState<string[]>([]);
   const [body, setBody] = useState("");
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [media, setMedia] = useState<DraftMedia[]>([]);
+  const [tiktok, setTiktok] = useState<Record<string, TikTokOptions>>({});
+  const disclosure = useDisclosure();
   const [when, setWhen] = useState<When>("now");
   const [scheduledAt, setScheduledAt] = useState(() => toLocalInput(new Date(Date.now() + 3_600_000)));
   const [error, setError] = useState<unknown>(null);
@@ -54,6 +59,10 @@ function Composer() {
   const chosen = accounts.filter((a) => selected.includes(a.id));
   const textFor = (a: Account) => overrides[a.id] ?? body;
   const tooLong = chosen.some((a) => lengthFor(textFor(a), capOf.get(a.platform)) > (capOf.get(a.platform)?.maxTextLength ?? Infinity));
+  const summary: MediaSummary = { kind: media[0]?.kind ?? null, durationSec: media[0]?.durationSec ?? null };
+  const tiktokAccounts = chosen.filter((a) => a.platform === "tiktok");
+  // Drafts can be saved unfinished; posting and scheduling need every TikTok setting.
+  const blockers = when === "draft" ? [] : tiktokAccounts.flatMap((a) => tiktokIssues(tiktok[a.id], undefined, summary, disclosure.isOpen(a.id, tiktok[a.id])));
 
   async function run(kind: "submit" | "ai", task: () => Promise<void>) {
     setBusy(kind);
@@ -79,8 +88,13 @@ function Composer() {
       const post = await api<Post>(`${base}/posts`, {
         body: {
           body,
+          media: toMediaBody(media),
           ...(when === "schedule" && { scheduledAt: new Date(scheduledAt).toISOString() }),
-          targets: chosen.map((a) => ({ accountId: a.id, ...(overrides[a.id] !== undefined && overrides[a.id] !== body && { text: overrides[a.id] }) })),
+          targets: chosen.map((a) => ({
+            accountId: a.id,
+            ...(overrides[a.id] !== undefined && overrides[a.id] !== body && { text: overrides[a.id] }),
+            ...(tiktok[a.id]?.mode && { options: tiktok[a.id] }),
+          })),
         },
       });
       if (when === "now") await api<PublishOutcome[]>(`${base}/posts/${post.id}/publish`, { method: "POST" });
@@ -102,9 +116,26 @@ function Composer() {
               <span className="text-xs tabular-nums text-muted-foreground">{graphemes(body)} characters</span>
             </div>
           </Card>
+          <MediaPicker media={media} onChange={setMedia} />
+          {tiktokAccounts.map((a) => (
+            <TikTokSettings
+              key={a.id}
+              account={a}
+              value={tiktok[a.id]}
+              onChange={(options) => setTiktok((t) => ({ ...t, [a.id]: options }))}
+              media={summary}
+              disclose={disclosure.isOpen(a.id, tiktok[a.id])}
+              onDisclose={(on) => disclosure.set(a.id, on)}
+            />
+          ))}
           <WhenPicker when={when} onWhen={setWhen} scheduledAt={scheduledAt} onScheduledAt={setScheduledAt} />
+          {blockers.length > 0 && (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {blockers.map((b) => <li key={b}>{b}</li>)}
+            </ul>
+          )}
           <ErrorNote error={error} />
-          <Button onClick={submit} loading={busy === "submit"} disabled={chosen.length === 0 || !body.trim() || tooLong} size="lg">
+          <Button onClick={submit} loading={busy === "submit"} disabled={chosen.length === 0 || !body.trim() || tooLong || blockers.length > 0} size="lg">
             {SUBMIT_LABEL[when]}
           </Button>
         </div>
@@ -117,6 +148,7 @@ function Composer() {
               account={a}
               cap={capOf.get(a.platform)}
               text={textFor(a)}
+              mediaCount={media.length}
               custom={overrides[a.id] !== undefined}
               onCustomize={() => setOverrides((o) => ({ ...o, [a.id]: body }))}
               onReset={() => setOverrides((o) => Object.fromEntries(Object.entries(o).filter(([id]) => id !== a.id)))}

@@ -13,6 +13,7 @@ export function PlatformPreview({
   account,
   cap,
   text,
+  mediaCount = 0,
   custom,
   onCustomize,
   onReset,
@@ -21,6 +22,7 @@ export function PlatformPreview({
   account: Account;
   cap?: PlatformInfo;
   text: string;
+  mediaCount?: number;
   custom: boolean;
   onCustomize: () => void;
   onReset: () => void;
@@ -41,6 +43,12 @@ export function PlatformPreview({
           {over && <span className="sr-only"> (too long)</span>}
         </span>
       </div>
+      {mediaCount > 0 && cap && !cap.media && (
+        <p className="mb-2 text-xs text-muted-foreground">{label} gets the text only; attached media isn’t posted there yet.</p>
+      )}
+      {cap?.media?.required && mediaCount === 0 && (
+        <p className="mb-2 text-xs font-medium text-warning">{label} needs a video or photos.</p>
+      )}
       {custom ? (
         <>
           <Textarea aria-label={`Text for ${label}`} value={text} onChange={(e) => onChange(e.target.value)} rows={4} />

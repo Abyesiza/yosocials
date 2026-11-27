@@ -118,7 +118,7 @@ export class AgentService {
         },
         { source: PostSource.Agent, asDraft: true },
       );
-      created.push(PostResponseDto.from(post));
+      created.push(this.posts.respond(post));
     }
 
     this.logger.log(

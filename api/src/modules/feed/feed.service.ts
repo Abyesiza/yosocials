@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository, type SelectQueryBuilder } from 'typeorm';
 import type { Paginated } from '../../common/dto/pagination-query.dto.js';
 import type { Platform } from '../../common/enums/platform.enum.js';
-import { PostTargetResponseDto } from '../posts/dto/post-response.dto.js';
+import {
+  PostMediaResponseDto,
+  PostTargetResponseDto,
+} from '../posts/dto/post-response.dto.js';
+import { MediaStorageService } from '../../common/storage/media-storage.service.js';
 import { PostTarget } from '../posts/entities/post-target.entity.js';
 import { TargetStatus } from '../posts/enums/post-status.enum.js';
 import type {
@@ -23,6 +27,7 @@ export class FeedService {
   constructor(
     @InjectRepository(PostTarget)
     private readonly targets: Repository<PostTarget>,
+    private readonly storage: MediaStorageService,
   ) {}
 
   async feed(
@@ -87,6 +92,9 @@ export class FeedService {
     return Object.assign(PostTargetResponseDto.from(target, target.post), {
       postId: target.post.id,
       postTitle: target.post.title,
+      media: target.post.media.map((m) =>
+        PostMediaResponseDto.from(m, this.storage.publicUrl(m.path)),
+      ),
     });
   }
 }

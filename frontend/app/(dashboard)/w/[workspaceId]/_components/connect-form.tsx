@@ -13,7 +13,7 @@ import { useWorkspace } from "./workspace-context";
 
 export function ConnectForm({ platform, onDone }: { platform: Platform; onDone: () => void }) {
   const { base } = useWorkspace();
-  const spec = CREDENTIAL_FIELDS[platform];
+  const spec = CREDENTIAL_FIELDS[platform]!;
   const form = useForm<z.input<typeof connectSchema>, unknown, z.output<typeof connectSchema>>({
     resolver: zodResolver(connectSchema),
     defaultValues: {

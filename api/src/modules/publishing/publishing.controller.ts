@@ -34,4 +34,21 @@ export class PublishingController {
   ): Promise<PublishOutcomeDto[]> {
     return this.publishing.publishNow(ws.workspaceId, id);
   }
+
+  @Post(':id/sync')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Check on targets a platform is still processing (TikTok) and record the outcome',
+  })
+  @ApiOkResponse({ type: [PublishOutcomeDto] })
+  sync(
+    @CurrentWorkspace() ws: WorkspaceContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PublishOutcomeDto[]> {
+    return this.publishing.syncProcessing({
+      workspaceId: ws.workspaceId,
+      postId: id,
+    });
+  }
 }

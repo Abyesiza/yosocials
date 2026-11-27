@@ -1,11 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { callApiWithSession } from "@/app/lib/server/api";
 import {
-  ACCESS_COOKIE,
-  API_URL,
   clearSessionCookies,
   isSameOrigin,
-  REFRESH_COOKIE,
-  refreshTokens,
   setSessionCookies,
   type TokenPair,
 } from "@/app/lib/server/session";
@@ -23,42 +20,29 @@ async function handle(request: NextRequest, { params }: Context) {
   if (path[0] === "auth") {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
-  // Re-encoding each segment keeps the request inside /api on a fixed origin.
-  const target = new URL(
-    `/api/${path.map(encodeURIComponent).join("/")}`,
-    API_URL,
-  );
-  target.search = request.nextUrl.search;
-
   const body =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
       : await request.text();
 
-  let access = request.cookies.get(ACCESS_COOKIE)?.value;
-  const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
-  let renewed: TokenPair | null = null;
-
-  if (!access && refresh) {
-    renewed = await refreshTokens(refresh);
-    access = renewed?.accessToken;
-  }
-  if (!access) return unauthorized();
-
-  let upstream = await send(target, request, body, access);
-
-  if (upstream?.status === 401 && refresh && !renewed) {
-    renewed = await refreshTokens(refresh);
-    if (!renewed) return unauthorized();
-    upstream = await send(target, request, body, renewed.accessToken);
-  }
+  // Re-encoding each segment keeps the request inside /api on a fixed origin.
+  const { upstream, renewed, signedOut } = await callApiWithSession(
+    request,
+    path.map(encodeURIComponent).join("/"),
+    {
+      method: request.method,
+      body,
+      contentType: request.headers.get("content-type") ?? undefined,
+      search: request.nextUrl.search,
+    },
+  );
+  if (signedOut) return unauthorized();
   if (!upstream) {
     return NextResponse.json(
       { message: "The Aby Socials API is not reachable" },
       { status: 502 },
     );
   }
-  if (upstream.status === 401) return unauthorized();
 
   // A deleted account has no session left to keep.
   if (path.join("/") === "me" && request.method === "DELETE" && upstream.ok) {
@@ -88,31 +72,6 @@ async function handle(request: NextRequest, { params }: Context) {
   );
   if (renewed) setSessionCookies(res, renewed);
   return res;
-}
-
-async function send(
-  target: URL,
-  request: NextRequest,
-  body: string | undefined,
-  accessToken: string,
-): Promise<Response | null> {
-  try {
-    return await fetch(target, {
-      method: request.method,
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        accept: "application/json",
-        ...(body !== undefined && {
-          "content-type": request.headers.get("content-type") ?? "application/json",
-        }),
-      },
-      body,
-      redirect: "error",
-      cache: "no-store",
-    });
-  } catch {
-    return null;
-  }
 }
 
 function unauthorized() {

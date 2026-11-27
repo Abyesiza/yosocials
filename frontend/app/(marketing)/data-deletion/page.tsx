@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
       <ul>
         <li>Your profile: name, email and password hash.</li>
         <li>All your sign-in sessions; every device is signed out at once.</li>
-        <li>Every workspace where you are the only member, with its connected accounts, stored credentials and platform sessions, posts, drafts, schedules and analytics.</li>
+        <li>Every workspace where you are the only member, with its connected accounts, stored credentials and platform sessions, posts, drafts, schedules, uploaded videos and photos, and analytics.</li>
         <li>Your membership in workspaces shared with others. Posts you created there stay with the workspace, without your name on them.</li>
       </ul>
     ),
@@ -52,7 +52,7 @@ const sections: LegalSection[] = [
       <ul>
         <li><strong>A connected account:</strong> Accounts → Disconnect. This deletes its stored credentials, ends its platform session, and removes its posts and analytics from {LEGAL.product}.</li>
         <li><strong>A workspace:</strong> Settings → Delete workspace (owners only).</li>
-        <li><strong>A post:</strong> open it and choose Delete.</li>
+        <li><strong>A post:</strong> open it and choose Delete. Its uploaded videos and photos are deleted with it.</li>
       </ul>
     ),
   },

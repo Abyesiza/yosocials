@@ -30,6 +30,7 @@ export class DiscordProvider implements PlatformProvider<DiscordCredentialsDto> 
     supportsMetrics: true,
     contentStyle:
       'Community announcement in a server channel. Markdown is supported; keep it friendly and skimmable.',
+    connect: 'credentials',
   };
 
   parseCredentials(raw: unknown): Promise<DiscordCredentialsDto> {

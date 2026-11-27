@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, type EntityManager, Repository } from 'typeorm';
+import { MediaStorageService } from '../../common/storage/media-storage.service.js';
 import { UsersService } from '../users/users.service.js';
 import type {
   AddMemberDto,
@@ -27,6 +28,7 @@ export class WorkspacesService {
     @InjectRepository(WorkspaceMember)
     private readonly members: Repository<WorkspaceMember>,
     private readonly users: UsersService,
+    private readonly storage: MediaStorageService,
   ) {}
 
   /** Creates a workspace owned by `userId`, inside the caller's transaction. */
@@ -82,6 +84,7 @@ export class WorkspacesService {
   /** Deletes the workspace and, through cascades, its accounts and posts. */
   async remove(workspaceId: string): Promise<void> {
     await this.workspaces.delete(workspaceId);
+    await this.storage.removeWorkspace(workspaceId);
   }
 
   listMembers(workspaceId: string): Promise<WorkspaceMember[]> {

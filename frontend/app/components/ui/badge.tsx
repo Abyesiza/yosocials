@@ -30,6 +30,7 @@ const STATUS: Record<PostStatus | TargetStatus, BadgeVariant> = {
   draft: "secondary",
   scheduled: "default",
   publishing: "warning",
+  processing: "warning",
   published: "success",
   partially_published: "warning",
   failed: "destructive",

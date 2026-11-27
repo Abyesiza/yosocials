@@ -7,19 +7,24 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import type { Paginated } from '../../common/dto/pagination-query.dto.js';
+import { MediaStorageService } from '../../common/storage/media-storage.service.js';
+import { MEDIA_TYPES } from '../../common/storage/media-types.js';
 import { AccountsService } from '../accounts/accounts.service.js';
 import type { SocialAccount } from '../accounts/entities/social-account.entity.js';
+import type { PublishInput } from '../integrations/interfaces/platform-provider.interface.js';
 import { IntegrationsRegistry } from '../integrations/integrations.registry.js';
 import { countGraphemes } from '../integrations/parse-credentials.js';
 import type { CreatePostDto } from './dto/create-post.dto.js';
 import type { ListPostsQueryDto } from './dto/list-posts-query.dto.js';
+import type { MediaItemDto } from './dto/media-item.dto.js';
+import { PostResponseDto } from './dto/post-response.dto.js';
 import type { SchedulePostDto } from './dto/schedule-post.dto.js';
 import type {
   UpdatePostDto,
   UpdatePostTargetDto,
 } from './dto/update-post.dto.js';
 import { PostTarget } from './entities/post-target.entity.js';
-import { Post } from './entities/post.entity.js';
+import { Post, type PostMedia } from './entities/post.entity.js';
 import { PostSource, TargetStatus } from './enums/post-status.enum.js';
 
 /** Targets in these states can still be edited, scheduled or published. */
@@ -46,6 +51,7 @@ export class PostsService {
     private readonly targets: Repository<PostTarget>,
     private readonly accounts: AccountsService,
     private readonly registry: IntegrationsRegistry,
+    private readonly storage: MediaStorageService,
   ) {}
 
   async create(
@@ -67,28 +73,39 @@ export class PostsService {
       ]),
     );
 
-    const post = this.posts.create({
-      workspaceId,
-      createdById: options.createdById ?? null,
-      title: dto.title ?? null,
-      body: dto.body,
-      source: options.source ?? PostSource.Manual,
-      targets: dto.targets.map((t) => {
-        const scheduledAt = t.scheduledAt ?? dto.scheduledAt ?? null;
-        return this.targets.create({
+    const targets: PostTarget[] = [];
+    for (const t of dto.targets) {
+      const account = accounts.get(t.accountId)!;
+      const scheduledAt = t.scheduledAt ?? dto.scheduledAt ?? null;
+      targets.push(
+        this.targets.create({
           accountId: t.accountId,
-          account: accounts.get(t.accountId),
+          account,
           text: t.text ?? null,
+          options: await this.parseOptions(account, t.options),
           scheduledAt,
           status:
             scheduledAt && !options.asDraft
               ? TargetStatus.Scheduled
               : TargetStatus.Draft,
-        });
-      }),
+        }),
+      );
+    }
+    const post = this.posts.create({
+      workspaceId,
+      createdById: options.createdById ?? null,
+      title: dto.title ?? null,
+      body: dto.body,
+      media: this.toMedia(workspaceId, dto.media ?? []),
+      source: options.source ?? PostSource.Manual,
+      targets,
     });
 
     this.assertTextFits(post, post.targets);
+    this.assertReady(
+      post,
+      post.targets.filter((t) => t.status === TargetStatus.Scheduled),
+    );
     const saved = await this.posts.save(post);
     return this.findOne(workspaceId, saved.id);
   }
@@ -146,8 +163,25 @@ export class PostsService {
       this.assertNotPublishing(post);
       post.body = dto.body;
     }
+    const dropped: string[] = [];
+    if (dto.media !== undefined) {
+      this.assertNotPublishing(post);
+      const media = this.toMedia(workspaceId, dto.media);
+      dropped.push(
+        ...post.media
+          .filter((m) => !media.some((n) => n.path === m.path))
+          .map((m) => m.path),
+      );
+      post.media = media;
+    }
     this.assertTextFits(post, this.editable(post));
+    this.assertReady(
+      post,
+      post.targets.filter((t) => t.status === TargetStatus.Scheduled),
+    );
     await this.posts.save(post);
+    // Only after the save, so a rejected edit never loses files.
+    await this.storage.remove(dropped);
     return this.findOne(workspaceId, id);
   }
 
@@ -165,6 +199,12 @@ export class PostsService {
       );
     }
     if (dto.text !== undefined) target.text = dto.text;
+    if (dto.options !== undefined) {
+      target.options = await this.parseOptions(
+        target.account,
+        dto.options ?? undefined,
+      );
+    }
     if (dto.scheduledAt !== undefined) {
       target.scheduledAt = dto.scheduledAt;
       if (
@@ -175,6 +215,9 @@ export class PostsService {
       }
     }
     this.assertTextFits(post, [target]);
+    if (target.status === TargetStatus.Scheduled) {
+      this.assertReady(post, [target]);
+    }
     await this.targets.save(target);
     return this.findOne(workspaceId, postId);
   }
@@ -207,6 +250,7 @@ export class PostsService {
       }
     }
     this.assertTextFits(post, chosen);
+    this.assertReady(post, chosen);
 
     for (const target of chosen) {
       target.status = TargetStatus.Scheduled;
@@ -231,7 +275,47 @@ export class PostsService {
   async remove(workspaceId: string, id: string): Promise<void> {
     const post = await this.findOne(workspaceId, id);
     this.assertNotPublishing(post);
+    const paths = post.media.map((m) => m.path);
     await this.posts.remove(post);
+    await this.storage.remove(paths);
+  }
+
+  respond(post: Post): PostResponseDto {
+    return PostResponseDto.from(post, (path) => this.storage.publicUrl(path));
+  }
+
+  /** What the platform receives for this target. */
+  publishInput(post: Post, target: PostTarget): PublishInput {
+    return {
+      text: target.effectiveText(post),
+      idempotencyKey: target.id,
+      options: target.options,
+      media: post.media.map((m) => ({
+        kind: m.kind,
+        url: this.storage.publicUrl(m.path),
+        contentType: m.contentType,
+        size: m.size,
+        durationSec: m.durationSec ?? null,
+      })),
+    };
+  }
+
+  /**
+   * Rejects targets their platform can't take as they are: too long, or
+   * missing what it requires (TikTok: media and posting settings).
+   */
+  assertReady(post: Post, targets: PostTarget[]): void {
+    this.assertTextFits(post, targets);
+    const problems = targets.flatMap((target) => {
+      const provider = this.registry.get(target.account.platform);
+      return (
+        provider.readinessIssues?.(this.publishInput(post, target)) ?? []
+      ).map(
+        (issue) =>
+          `${provider.displayName} (${target.account.handle}): ${issue}`,
+      );
+    });
+    if (problems.length > 0) throw new BadRequestException(problems);
   }
 
   /** Rejects text that's longer than a platform allows. */
@@ -255,6 +339,49 @@ export class PostsService {
     return length > capabilities.maxTextLength
       ? `${displayName} (${account.handle}) allows ${capabilities.maxTextLength} ${capabilities.lengthUnit}; this text has ${length}`
       : null;
+  }
+
+  private async parseOptions(
+    account: SocialAccount,
+    raw: Record<string, unknown> | undefined,
+  ): Promise<Record<string, unknown> | null> {
+    if (raw === undefined) return null;
+    const provider = this.registry.get(account.platform);
+    if (!provider.parseTargetOptions) {
+      throw new BadRequestException(
+        `${provider.displayName} has no extra post settings`,
+      );
+    }
+    return provider.parseTargetOptions(raw);
+  }
+
+  /** Uploads must come from this workspace; one video, or images only. */
+  private toMedia(workspaceId: string, items: MediaItemDto[]): PostMedia[] {
+    const media = items.map((m): PostMedia => {
+      if (!m.path.startsWith(`${workspaceId}/`)) {
+        throw new BadRequestException(
+          'Media must be uploaded to this workspace',
+        );
+      }
+      const kind = MEDIA_TYPES[m.contentType].kind;
+      return {
+        path: m.path,
+        kind,
+        contentType: m.contentType,
+        size: m.size,
+        durationSec: kind === 'video' ? (m.durationSec ?? null) : null,
+      };
+    });
+    if (new Set(media.map((m) => m.path)).size !== media.length) {
+      throw new BadRequestException('The same file is attached twice');
+    }
+    const videos = media.filter((m) => m.kind === 'video').length;
+    if (videos > 0 && media.length > 1) {
+      throw new BadRequestException(
+        'Attach one video, or images only. Videos and images can’t be mixed.',
+      );
+    }
+    return media;
   }
 
   private editable(post: Post): PostTarget[] {
