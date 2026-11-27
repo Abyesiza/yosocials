@@ -78,7 +78,7 @@ Each module keeps `entities/`, `dto/`, `enums/` or `interfaces/` apart from its 
 
 - **User**, **Workspace**, **WorkspaceMember** (with role): who can see and do what. Accounts and posts belong to a workspace, and deleting the workspace deletes them.
 - **SocialAccount**: one connected account or channel. Holds the persona, brand voice and encrypted credentials.
-- **Post**: one piece of content (`title`, `body`, `media`: one video or up to 35 images, stored in Supabase Storage).
+- **Post**: one piece of content (`title`, `body`, `media`: one video or up to 35 images, stored on UploadThing).
 - **PostTarget**: that post on one account. It has its own text, platform `options` (TikTok privacy and interactions), `scheduledAt`, status, publish result and latest metrics. The feed and the calendar both read from this table.
 - **PostMetricSnapshot**: engagement for a target at one point in time, so you can see how a post moved after publishing.
 
@@ -109,7 +109,7 @@ Built on the official SDK, following the [Bluesky API docs](https://bsky.network
 Built on the [Content Posting API](https://developers.tiktok.com/doc/content-posting-api-get-started) and Login Kit.
 
 - **Connecting:** `POST /accounts/oauth/tiktok/start` returns TikTok’s authorize URL with a signed, 15-minute `state` bound to the workspace and user. TikTok redirects to the web app (`/integrations/tiktok/callback`), which checks the state against an httpOnly cookie and posts the code to `POST /accounts/oauth/tiktok/callback`. Tokens are stored encrypted in `provider_sessions` and refreshed before they expire. Disconnecting revokes them, unless another workspace uses the same TikTok account.
-- **Posting:** per target, `options.mode` is `direct` (Direct Post, `video.publish`) or `inbox` (a draft the creator finishes in TikTok, `video.upload`). Direct posts re-query creator info first and respect the creator’s privacy options, comment/Duet/Stitch settings and maximum video length. TikTok pulls media from `MEDIA_PUBLIC_BASE_URL`, so that domain must be verified on the TikTok app (URL properties).
+- **Posting:** per target, `options.mode` is `direct` (Direct Post, `video.publish`) or `inbox` (a draft the creator finishes in TikTok, `video.upload`). Direct posts re-query creator info first and respect the creator’s privacy options, comment/Duet/Stitch settings and maximum video length. Media is uploaded from the browser to UploadThing through the web app’s `/api/uploadthing` route, which asks `POST /media/uploads` to authorize the editor and name each file `<workspaceId>_<uuid>.<ext>`. TikTok pulls it from `MEDIA_PUBLIC_BASE_URL` (`abysocials.com/media/<id>`, proxied to `<appId>.ufs.sh/f/<id>`), so that domain must be verified on the TikTok app (URL properties).
 - **Status:** TikTok publishes asynchronously. Targets stay `processing` until the status endpoint reports `PUBLISH_COMPLETE` (or the creator posts the inbox draft). Video ids are 19-digit numbers, parsed as strings so they aren’t rounded.
 - **Review:** until TikTok audits the app, Direct Posts can only be private (“Only me”).
 

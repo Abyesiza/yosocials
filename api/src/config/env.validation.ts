@@ -113,31 +113,17 @@ export class EnvironmentVariables {
   TIKTOK_SCOPES =
     'user.info.basic,user.info.profile,video.publish,video.upload,video.list';
 
-  /** Supabase project URL and service-role key, for media uploads (Supabase Storage). */
-  @IsOptional()
-  @IsUrl({ require_tld: false, require_protocol: true })
-  SUPABASE_URL?: string;
-
+  /** UploadThing token (dashboard → API Keys). Media uploads stay off until it's set. */
   @IsOptional()
   @IsString()
-  SUPABASE_SERVICE_ROLE_KEY?: string;
-
-  /** Public Supabase Storage bucket for uploaded media. Created on first upload. */
-  @IsString()
-  MEDIA_BUCKET = 'media';
+  UPLOADTHING_TOKEN?: string;
 
   /**
    * Public base URL media is served from. The web app proxies `/media/*` to
-   * the bucket, so platforms that pull media (TikTok) see a verified domain.
+   * UploadThing, so platforms that pull media (TikTok) see a verified domain.
    */
   @IsUrl({ require_tld: false, require_protocol: true })
   MEDIA_PUBLIC_BASE_URL = 'https://abysocials.com/media';
-
-  /** Largest upload accepted, in bytes. Supabase's own project limit also applies. */
-  @Transform(({ value }) => Number(value))
-  @IsInt()
-  @Min(1)
-  MEDIA_MAX_BYTES = 500 * 1024 * 1024;
 
   /**
    * Turn the publish/metrics cron jobs off, e.g. on extra API replicas.

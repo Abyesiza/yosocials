@@ -6,157 +6,86 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UTApi } from 'uploadthing/server';
 import type { EnvironmentVariables } from '../../config/env.validation.js';
-import { PlatformApiError, requestJson } from '../http/http-client.js';
-import { MEDIA_TYPES } from './media-types.js';
+import { MAX_BYTES, MAX_IMAGES, MEDIA_TYPES } from './media-types.js';
 
-export interface UploadTicket {
-  path: string;
-  /** Signed Supabase URL the browser PUTs the file to; valid for 2 hours. */
-  uploadUrl: string;
-  publicUrl: string;
+export interface UploadRequest {
+  contentType: string;
+  size: number;
 }
 
 /**
- * Uploaded media in a public Supabase Storage bucket. Browsers upload
- * straight to signed URLs, so large videos never pass through the API.
+ * Uploaded media on UploadThing. The web app's upload route asks `reserve`
+ * for each file's custom id, so files can only land in a workspace whose
+ * editors asked for them; the API deletes them with the same ids.
  */
 @Injectable()
 export class MediaStorageService {
   private readonly logger = new Logger(MediaStorageService.name);
-  private readonly url?: string;
-  private readonly key?: string;
-  private readonly bucket: string;
+  private readonly utapi?: UTApi;
   private readonly publicBase: string;
-  readonly maxBytes: number;
-  private bucketReady?: Promise<void>;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
-    this.url = config.get('SUPABASE_URL', { infer: true })?.replace(/\/$/, '');
-    this.key = config.get('SUPABASE_SERVICE_ROLE_KEY', { infer: true });
-    this.bucket = config.get('MEDIA_BUCKET', { infer: true });
+    const token = config.get('UPLOADTHING_TOKEN', { infer: true });
+    // Late-bound so the global fetch in use at call time is the one used.
+    this.utapi = token
+      ? new UTApi({
+          token,
+          fetch: (input, init) => globalThis.fetch(input, init),
+        })
+      : undefined;
     this.publicBase = config
       .get('MEDIA_PUBLIC_BASE_URL', { infer: true })
       .replace(/\/$/, '');
-    this.maxBytes = config.get('MEDIA_MAX_BYTES', { infer: true });
   }
 
   isConfigured(): boolean {
-    return Boolean(this.url && this.key);
+    return Boolean(this.utapi);
   }
 
   publicUrl(path: string): string {
     return `${this.publicBase}/${path}`;
   }
 
-  async createUpload(
-    workspaceId: string,
-    contentType: string,
-    size: number,
-  ): Promise<UploadTicket> {
-    const type = MEDIA_TYPES[contentType];
-    if (!type) throw new BadRequestException(`${contentType} isn't supported`);
-    if (size > this.maxBytes) {
-      throw new BadRequestException(
-        `Files can be up to ${Math.floor(this.maxBytes / 1024 / 1024)} MB`,
+  /** Validates an upload and returns one custom id per file, in order. */
+  reserve(workspaceId: string, files: UploadRequest[]): string[] {
+    if (!this.utapi) {
+      throw new ServiceUnavailableException(
+        'Media uploads are not set up yet (UPLOADTHING_TOKEN)',
       );
     }
-    await this.ensureBucket();
-    const path = `${workspaceId}/${randomUUID()}.${type.ext}`;
-    const signed = await this.call<{ url: string }>(
-      `/object/upload/sign/${this.bucket}/${path}`,
-      { json: {} },
+    const kinds = files.map((f) => {
+      const type = MEDIA_TYPES[f.contentType];
+      if (!type)
+        throw new BadRequestException(`${f.contentType} isn't supported`);
+      if (f.size > MAX_BYTES[type.kind]) {
+        throw new BadRequestException(
+          `${type.kind === 'video' ? 'Videos' : 'Photos'} can be up to ${MAX_BYTES[type.kind] / 1024 / 1024} MB`,
+        );
+      }
+      return type.kind;
+    });
+    if (kinds.includes('video') && kinds.length > 1) {
+      throw new BadRequestException('Upload one video, or photos only');
+    }
+    if (kinds.length > MAX_IMAGES) {
+      throw new BadRequestException(`Upload up to ${MAX_IMAGES} photos`);
+    }
+    return files.map(
+      (f) => `${workspaceId}_${randomUUID()}.${MEDIA_TYPES[f.contentType].ext}`,
     );
-    return {
-      path,
-      uploadUrl: `${this.config().url}/storage/v1${signed.url}`,
-      publicUrl: this.publicUrl(path),
-    };
   }
 
   /** Best effort: a storage outage must not block deleting posts or workspaces. */
   async remove(paths: string[]): Promise<void> {
-    if (!this.isConfigured() || paths.length === 0) return;
+    if (!this.utapi || paths.length === 0) return;
     try {
-      await this.call(`/object/${this.bucket}`, {
-        method: 'DELETE',
-        json: { prefixes: paths },
-      });
+      await this.utapi.deleteFiles(paths, { keyType: 'customId' });
     } catch (error) {
       this.logger.warn(
         `Could not delete ${paths.length} media file(s): ${String(error)}`,
       );
     }
-  }
-
-  /** Deletes everything a workspace uploaded. */
-  async removeWorkspace(workspaceId: string): Promise<void> {
-    if (!this.isConfigured()) return;
-    try {
-      for (;;) {
-        const objects = await this.call<{ name: string }[]>(
-          `/object/list/${this.bucket}`,
-          { json: { prefix: `${workspaceId}/`, limit: 1000 } },
-        );
-        if (objects.length === 0) return;
-        await this.remove(objects.map((o) => `${workspaceId}/${o.name}`));
-        if (objects.length < 1000) return;
-      }
-    } catch (error) {
-      this.logger.warn(
-        `Could not clear media of a workspace: ${String(error)}`,
-      );
-    }
-  }
-
-  private ensureBucket(): Promise<void> {
-    this.bucketReady ??= this.createBucketIfMissing().catch((error) => {
-      this.bucketReady = undefined;
-      throw error;
-    });
-    return this.bucketReady;
-  }
-
-  private async createBucketIfMissing(): Promise<void> {
-    try {
-      await this.call(`/bucket/${this.bucket}`);
-    } catch (error) {
-      if (
-        !(error instanceof PlatformApiError) ||
-        (error.status !== 400 && error.status !== 404)
-      ) {
-        throw error;
-      }
-      await this.call('/bucket', {
-        json: {
-          id: this.bucket,
-          name: this.bucket,
-          // Platforms like TikTok fetch media by URL, so objects are public.
-          public: true,
-          allowed_mime_types: Object.keys(MEDIA_TYPES),
-        },
-      });
-      this.logger.log(`Created storage bucket "${this.bucket}"`);
-    }
-  }
-
-  private config(): { url: string; key: string } {
-    if (!this.url || !this.key) {
-      throw new ServiceUnavailableException(
-        'Media uploads are not set up yet (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)',
-      );
-    }
-    return { url: this.url, key: this.key };
-  }
-
-  private call<T>(
-    path: string,
-    init: { method?: 'GET' | 'POST' | 'DELETE'; json?: unknown } = {},
-  ): Promise<T> {
-    const { url, key } = this.config();
-    return requestJson<T>(`${url}/storage/v1${path}`, {
-      ...init,
-      headers: { authorization: `Bearer ${key}`, apikey: key },
-    });
   }
 }

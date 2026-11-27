@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsIn,
   IsInt,
   IsNumber,
@@ -8,6 +12,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import {
   MEDIA_CONTENT_TYPES,
@@ -16,7 +21,10 @@ import {
 
 /** A file uploaded through `POST /media/uploads`, attached to a post. */
 export class MediaItemDto {
-  @ApiProperty({ example: '<workspaceId>/<uuid>.mp4' })
+  @ApiProperty({
+    example: '<workspaceId>_<uuid>.mp4',
+    description: 'UploadThing custom id',
+  })
   @IsString()
   @Matches(MEDIA_PATH_PATTERN, { message: 'media path is not an upload path' })
   path: string;
@@ -38,7 +46,7 @@ export class MediaItemDto {
   durationSec?: number;
 }
 
-export class CreateUploadDto {
+export class UploadFileDto {
   @ApiProperty({ enum: MEDIA_CONTENT_TYPES })
   @IsIn(MEDIA_CONTENT_TYPES, {
     message: 'Upload an MP4, MOV or WebM video, or a JPEG or WebP image',
@@ -51,9 +59,20 @@ export class CreateUploadDto {
   size: number;
 }
 
-export class UploadTicketDto {
-  @ApiProperty() path: string;
-  @ApiProperty({ description: 'PUT the file here, with its Content-Type' })
-  uploadUrl: string;
-  @ApiProperty() publicUrl: string;
+export class ReserveUploadsDto {
+  @ApiProperty({ type: [UploadFileDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(35)
+  @ValidateNested({ each: true })
+  @Type(() => UploadFileDto)
+  files: UploadFileDto[];
+}
+
+export class ReservedUploadsDto {
+  @ApiProperty({
+    type: [String],
+    description: 'UploadThing custom id for each file, in order',
+  })
+  customIds: string[];
 }
