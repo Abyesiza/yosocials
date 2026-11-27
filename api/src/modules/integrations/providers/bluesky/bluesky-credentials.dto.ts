@@ -13,7 +13,7 @@ import {
  */
 export class BlueskyCredentialsDto {
   @ApiProperty({
-    example: 'yosocials.bsky.social',
+    example: 'abysocials.bsky.social',
     description: 'Handle or DID',
   })
   @IsString()

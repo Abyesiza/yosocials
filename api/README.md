@@ -1,4 +1,4 @@
-# Yo Socials API
+# Aby Socials API
 
 NestJS backend that connects social accounts, plans content with Gemini, publishes on schedule, and tracks how each post performs.
 

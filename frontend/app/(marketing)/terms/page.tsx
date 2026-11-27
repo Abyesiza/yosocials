@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/app/lib/seo";
 import Link from "next/link";
+import { SITE } from "@/app/lib/site";
 import { LEGAL } from "../_components/legal/legal-config";
 import { LegalDocument, type LegalSection } from "../_components/legal/legal-document";
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
   title: "Terms of Service",
   description: `The terms that apply when you use ${LEGAL.product}.`,
-  alternates: { canonical: "/terms" },
-};
+  path: "/terms",
+});
 
 const sections: LegalSection[] = [
   {
@@ -15,8 +16,9 @@ const sections: LegalSection[] = [
     title: "Agreement",
     body: (
       <p>
-        These terms are an agreement between you and {LEGAL.legalEntity} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) for the use of{" "}
-        {LEGAL.product}. By creating an account or using the service, you accept them. If you use {LEGAL.product} for an
+        {LEGAL.product} is owned and operated by {LEGAL.legalEntity} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). These terms are an
+        agreement between you and {LEGAL.legalEntity} for the use of {LEGAL.product}, including the website at{" "}
+        <a href={SITE.url}>{SITE.domain}</a>. By creating an account or using the service, you accept them. If you use {LEGAL.product} for an
         organisation, you confirm that you can accept them on its behalf.
       </p>
     ),

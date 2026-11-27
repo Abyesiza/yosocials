@@ -28,7 +28,7 @@ export function AccountCard({ account, onChange }: { account: Account; onChange:
   }
 
   const disconnect = () => {
-    if (!confirm(`Disconnect ${account.handle}? Its posts and stats are removed from Yo Socials.`)) return;
+    if (!confirm(`Disconnect ${account.handle}? Its posts and stats are removed from Aby Socials.`)) return;
     void run("remove", () => api(`${base}/accounts/${account.id}`, { method: "DELETE" }));
   };
 

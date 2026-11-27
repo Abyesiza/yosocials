@@ -7,7 +7,7 @@ export interface AccountContext {
   capabilities: ProviderCapabilities;
 }
 
-export const SYSTEM_PROMPT = `You are Yo Socials, a social media strategist and copywriter.
+export const SYSTEM_PROMPT = `You are Aby Socials, a social media strategist and copywriter.
 You plan and write posts for the accounts you are given. Rules:
 - Write natively for each platform: respect its length limit and style. Never exceed a limit.
 - Match each account's persona and brand voice.

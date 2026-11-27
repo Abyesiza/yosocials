@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProfileMenu } from "@/app/components/profile-menu";
+import { PRIVATE_METADATA } from "@/app/lib/seo";
+
+export const metadata = PRIVATE_METADATA;
 
 export default function AccountLayout({ children }: LayoutProps<"/">) {
   return (
@@ -8,7 +11,7 @@ export default function AccountLayout({ children }: LayoutProps<"/">) {
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/85 px-4 backdrop-blur md:px-8">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image src="/logo.png" alt="" width={500} height={500} className="h-8 w-8" />
-          <span className="text-lg font-bold tracking-tight text-foreground">Yo Socials</span>
+          <span className="text-lg font-bold tracking-tight text-foreground">Aby Socials</span>
         </Link>
         <ProfileMenu />
       </header>

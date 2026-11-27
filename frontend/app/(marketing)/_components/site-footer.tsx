@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/app/lib/site";
 import { BrandMark } from "./brand-mark";
 import { NAV_LINKS } from "./content";
 
@@ -18,7 +19,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-          <p>© <CopyrightYear /> Yo Socials. All rights reserved.</p>
+          <p>© <CopyrightYear /> {SITE.owner.name}. {SITE.name} is owned by {SITE.owner.name}. All rights reserved.</p>
           <nav aria-label="Legal" className="flex gap-4">
             <Link href="/terms" className="hover:text-foreground">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>

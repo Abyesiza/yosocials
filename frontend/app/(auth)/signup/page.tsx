@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/app/lib/seo";
 import { Suspense } from "react";
 import { FormSkeleton } from "@/app/components/skeletons";
 import { AuthForm } from "../auth-form";
 
-export const metadata: Metadata = { title: "Sign up" };
+export const metadata = publicPageMetadata({
+  title: "Sign up",
+  description: "Create a free Aby Socials account and let the AI agent plan, publish and track posts across Bluesky, Mastodon, Telegram and Discord.",
+  path: "/signup",
+});
 
 export default function Page() {
   return (

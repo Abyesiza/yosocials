@@ -14,7 +14,7 @@ export class TelegramCredentialsDto {
   botToken: string;
 
   @ApiProperty({
-    example: '@yosocials',
+    example: '@abysocials',
     description: 'Public channel @username, or numeric id like -1001234567890',
   })
   @IsString()

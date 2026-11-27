@@ -38,7 +38,7 @@ export function AddMemberForm({ onAdded }: { onAdded: () => void }) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-3 border-b border-border p-5">
       <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-start">
-        <Field label="Add by email" hint="They need a Yo Socials account first." error={errors.email?.message}>
+        <Field label="Add by email" hint="They need a Aby Socials account first." error={errors.email?.message}>
           <Input type="email" placeholder="teammate@example.com" aria-invalid={Boolean(errors.email)} {...form.register("email")} />
         </Field>
         <Field label="Role">
