@@ -25,7 +25,10 @@ async function bodyOf(
   if (raw === null || raw === undefined) return undefined;
   if (typeof raw === 'string')
     return contentType?.includes('json') ? JSON.parse(raw) : raw;
-  return new Uint8Array(await new Response(raw).arrayBuffer());
+  const bytes = new Uint8Array(await new Response(raw).arrayBuffer());
+  return contentType?.includes('json')
+    ? JSON.parse(new TextDecoder().decode(bytes))
+    : bytes;
 }
 
 /** Replaces global fetch with a router over `METHOD host/path` keys (or `…/*` prefixes); unmatched requests fail loudly. */

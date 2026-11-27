@@ -83,8 +83,12 @@ export class WorkspacesService {
 
   /** Deletes the workspace and, through cascades, its accounts and posts. */
   async remove(workspaceId: string): Promise<void> {
+    const media: { path: string }[] = await this.dataSource.query(
+      `SELECT jsonb_array_elements(media)->>'path' AS path FROM posts WHERE "workspaceId" = $1`,
+      [workspaceId],
+    );
     await this.workspaces.delete(workspaceId);
-    await this.storage.removeWorkspace(workspaceId);
+    await this.storage.remove(media.map((m) => m.path));
   }
 
   listMembers(workspaceId: string): Promise<WorkspaceMember[]> {

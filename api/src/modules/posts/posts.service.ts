@@ -358,7 +358,7 @@ export class PostsService {
   /** Uploads must come from this workspace; one video, or images only. */
   private toMedia(workspaceId: string, items: MediaItemDto[]): PostMedia[] {
     const media = items.map((m): PostMedia => {
-      if (!m.path.startsWith(`${workspaceId}/`)) {
+      if (!m.path.startsWith(`${workspaceId}_`)) {
         throw new BadRequestException(
           'Media must be uploaded to this workspace',
         );

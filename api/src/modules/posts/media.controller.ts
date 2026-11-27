@@ -8,7 +8,7 @@ import {
 } from '../workspaces/decorators/workspace.decorators.js';
 import { WorkspaceRole } from '../workspaces/enums/workspace-role.enum.js';
 import type { WorkspaceContext } from '../workspaces/interfaces/workspace-context.interface.js';
-import { CreateUploadDto, UploadTicketDto } from './dto/media-item.dto.js';
+import { ReservedUploadsDto, ReserveUploadsDto } from './dto/media-item.dto.js';
 
 @ApiTags('media')
 @WorkspaceScoped()
@@ -20,13 +20,13 @@ export class MediaController {
   @RequireRole(WorkspaceRole.Editor)
   @ApiOperation({
     summary:
-      'Get a signed URL to upload a video or image to, then attach its path to a post',
+      'Called by the web app’s UploadThing route: checks the upload is allowed and names each file',
   })
-  @ApiCreatedResponse({ type: UploadTicketDto })
-  createUpload(
+  @ApiCreatedResponse({ type: ReservedUploadsDto })
+  reserve(
     @CurrentWorkspace() ws: WorkspaceContext,
-    @Body() dto: CreateUploadDto,
-  ): Promise<UploadTicketDto> {
-    return this.storage.createUpload(ws.workspaceId, dto.contentType, dto.size);
+    @Body() dto: ReserveUploadsDto,
+  ): ReservedUploadsDto {
+    return { customIds: this.storage.reserve(ws.workspaceId, dto.files) };
   }
 }

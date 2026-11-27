@@ -68,12 +68,6 @@ export interface MediaItem {
   url: string;
 }
 
-export interface UploadTicket {
-  path: string;
-  uploadUrl: string;
-  publicUrl: string;
-}
-
 export type TikTokPrivacyLevel = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";
 
 export interface TikTokOptions {

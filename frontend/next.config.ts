@@ -1,19 +1,22 @@
 import type { NextConfig } from "next";
 
-// Uploaded media is served from our own domain so platforms that pull files by
-// URL (TikTok) see a verified domain; this proxies, it never redirects.
-const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
-const mediaBucket = process.env.MEDIA_BUCKET ?? "media";
+// The UploadThing token is base64 JSON that includes the app id.
+function uploadThingAppId(): string | undefined {
+  try {
+    const token = process.env.UPLOADTHING_TOKEN;
+    return token ? (JSON.parse(Buffer.from(token, "base64").toString()) as { appId?: string }).appId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+const appId = uploadThingAppId();
 
 const nextConfig: NextConfig = {
+  // Uploads are served from our own domain so platforms that pull files by URL
+  // (TikTok) see a verified domain. A rewrite proxies; it never redirects.
   async rewrites() {
-    if (!supabaseUrl) return [];
-    return [
-      {
-        source: "/media/:path*",
-        destination: `${supabaseUrl}/storage/v1/object/public/${mediaBucket}/:path*`,
-      },
-    ];
+    if (!appId) return [];
+    return [{ source: "/media/:id", destination: `https://${appId}.ufs.sh/f/:id` }];
   },
   experimental: {
     agentFeedback: true,

@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { LuImagePlus, LuX } from "react-icons/lu";
 import { Card, cn, ErrorNote, focusRing } from "@/app/components/ui";
-import { api } from "@/app/lib/api/client";
-import type { MediaContentType, MediaItem, UploadTicket } from "@/app/lib/api/types";
+import type { MediaContentType, MediaItem } from "@/app/lib/api/types";
+import { uploadFiles } from "@/app/lib/uploadthing";
 import { useWorkspace } from "./workspace-context";
 
 const TYPES: Record<string, MediaItem["kind"]> = {
@@ -36,22 +36,9 @@ function videoDuration(file: File): Promise<number | null> {
   });
 }
 
-// fetch can't report upload progress; XHR can.
-function put(url: string, file: File, onProgress: (p: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("content-type", file.type);
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}). Try again.`)));
-    xhr.onerror = () => reject(new Error("Upload failed. Check your connection and try again."));
-    xhr.send(file);
-  });
-}
-
-/** Attach one video, or up to 35 photos. Files go straight to storage, never through our servers. */
+/** Attach one video, or up to 35 photos. Files go straight to UploadThing, never through our servers. */
 export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]; onChange: (media: DraftMedia[]) => void; disabled?: boolean }) {
-  const { base } = useWorkspace();
+  const { workspaceId } = useWorkspace();
   const input = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<Record<string, number>>({});
   const [error, setError] = useState<unknown>(null);
@@ -65,22 +52,32 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
     if (all.includes("video") && all.length > 1) return setError(new Error("Attach one video, or photos only. Videos and photos can’t be mixed."));
     if (all.length > MAX_IMAGES) return setError(new Error(`Attach up to ${MAX_IMAGES} photos.`));
 
-    let next = media;
-    for (const file of files) {
-      const id = `${file.name}-${file.size}-${file.lastModified}`;
-      setUploads((u) => ({ ...u, [id]: 0 }));
-      try {
-        const kind = TYPES[file.type];
-        const durationSec = kind === "video" ? await videoDuration(file) : null;
-        const ticket = await api<UploadTicket>(`${base}/media/uploads`, { body: { contentType: file.type, size: file.size } });
-        await put(ticket.uploadUrl, file, (p) => setUploads((u) => ({ ...u, [id]: p })));
-        next = [...next, { path: ticket.path, kind, contentType: file.type as MediaContentType, size: file.size, durationSec, url: ticket.publicUrl, preview: URL.createObjectURL(file) }];
-        onChange(next);
-      } catch (e) {
-        setError(e);
-      } finally {
-        setUploads((u) => Object.fromEntries(Object.entries(u).filter(([key]) => key !== id)));
-      }
+    const ids = files.map((f) => `${f.name}-${f.size}-${f.lastModified}`);
+    setUploads(Object.fromEntries(ids.map((id) => [id, 0])));
+    try {
+      const durations = await Promise.all(files.map((f) => (TYPES[f.type] === "video" ? videoDuration(f) : null)));
+      const uploaded = await uploadFiles("postMedia", {
+        files,
+        input: { workspaceId },
+        onUploadProgress: ({ file, loaded }) =>
+          setUploads((u) => ({ ...u, [`${file.name}-${file.size}-${file.lastModified}`]: Math.min(loaded / file.size, 1) })),
+      });
+      onChange([
+        ...media,
+        ...uploaded.map((u, i): DraftMedia => ({
+          path: u.customId ?? "",
+          kind: TYPES[files[i].type],
+          contentType: files[i].type as MediaContentType,
+          size: files[i].size,
+          durationSec: durations[i],
+          url: u.ufsUrl,
+          preview: URL.createObjectURL(files[i]),
+        })),
+      ]);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setUploads({});
     }
   }
 

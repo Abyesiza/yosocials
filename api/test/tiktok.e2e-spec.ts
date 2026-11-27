@@ -9,13 +9,13 @@ import {
 } from './support/test-app.js';
 
 /**
- * TikTok end to end: OAuth connect, media uploads to Supabase Storage,
- * Direct Post and inbox uploads, asynchronous publish status, metrics and
- * disconnecting. TikTok and Supabase are stubbed.
+ * TikTok end to end: OAuth connect, media uploads (UploadThing), Direct
+ * Post and inbox uploads, asynchronous publish status, metrics and
+ * disconnecting. TikTok and UploadThing are stubbed.
  */
 
 const TT = 'open.tiktokapis.com';
-const SUPA = 'supabase.test/storage/v1';
+const UT = 'api.uploadthing.com';
 const OPEN_ID = 'open-id-123';
 const ACCESS = 'act.access-token-plaintext';
 
@@ -101,28 +101,25 @@ function stub() {
           view_count: 1200,
         })),
       }),
-    [`GET ${SUPA}/bucket/media`]: () => ({
-      status: 400,
-      body: { statusCode: '404', error: 'Bucket not found' },
-    }),
-    [`POST ${SUPA}/bucket`]: () => ({ body: { name: 'media' } }),
-    [`POST ${SUPA}/object/upload/sign/media/*`]: (req) => ({
+    [`POST ${UT}/v6/deleteFiles`]: (req) => ({
       body: {
-        url: `${req.url.pathname.replace('/storage/v1', '')}?token=signed`,
+        success: true,
+        deletedCount:
+          (req.body as { customIds?: string[] }).customIds?.length ?? 0,
       },
     }),
-    [`DELETE ${SUPA}/object/media`]: () => ({ body: [] }),
-    [`POST ${SUPA}/object/list/media`]: () => ({ body: [] }),
   });
   calls = mock.calls;
 }
 
+/** What the web app's UploadThing route does: reserve a custom id, then upload under it. */
 async function upload(contentType: string) {
   const res = await api
     .post('/media/uploads')
-    .send({ contentType, size: 5_000_000 })
+    .send({ files: [{ contentType, size: 5_000_000 }] })
     .expect(201);
-  return res.body as { path: string; uploadUrl: string; publicUrl: string };
+  const [path] = res.body.customIds as string[];
+  return { path, publicUrl: `https://abysocials.test/media/${path}` };
 }
 
 beforeAll(async () => {
@@ -236,26 +233,33 @@ describe('TikTok', () => {
     });
   });
 
-  it('issues signed upload URLs under the workspace, creating the bucket once', async () => {
-    const ticket = await upload('video/mp4');
-    expect(ticket.path).toMatch(
-      new RegExp(`^${owner.workspaceId}/[0-9a-f-]{36}\\.mp4$`),
-    );
-    expect(ticket.uploadUrl).toBe(
-      `https://supabase.test/storage/v1/object/upload/sign/media/${ticket.path}?token=signed`,
-    );
-    expect(ticket.publicUrl).toBe(
-      `https://abysocials.test/media/${ticket.path}`,
-    );
-    expect(sent(`${SUPA}/bucket`)[0].body).toMatchObject({ public: true });
-
-    await upload('image/jpeg');
-    expect(sent(`${SUPA}/bucket`)).toHaveLength(1);
-
-    await api
+  it('names uploads under the workspace and enforces the media rules', async () => {
+    const res = await api
       .post('/media/uploads')
-      .send({ contentType: 'application/pdf', size: 10 })
-      .expect(400);
+      .send({
+        files: [
+          { contentType: 'image/jpeg', size: 300_000 },
+          { contentType: 'image/webp', size: 300_000 },
+        ],
+      })
+      .expect(201);
+    expect(res.body.customIds).toEqual([
+      expect.stringMatching(
+        new RegExp(`^${owner.workspaceId}_[0-9a-f-]{36}\\.jpg$`),
+      ),
+      expect.stringMatching(
+        new RegExp(`^${owner.workspaceId}_[0-9a-f-]{36}\\.webp$`),
+      ),
+    ]);
+
+    const reject = (files: unknown[]) =>
+      api.post('/media/uploads').send({ files }).expect(400);
+    await reject([{ contentType: 'application/pdf', size: 10 }]);
+    await reject([{ contentType: 'image/jpeg', size: 17 * 1024 * 1024 }]);
+    await reject([
+      { contentType: 'video/mp4', size: 10 },
+      { contentType: 'image/jpeg', size: 10 },
+    ]);
   });
 
   it('keeps media to one video or images only, from this workspace', async () => {
@@ -457,6 +461,24 @@ describe('TikTok', () => {
     expect(res.body[0]).toMatchObject({ status: 'failed' });
     expect(res.body[0].error).toMatch(/privacy setting/);
     expect(sent(`${TT}/v2/post/publish/video/init/`)).toHaveLength(0);
+  });
+
+  it('deletes a post’s files from UploadThing with the post', async () => {
+    const video = await upload('video/mp4');
+    const post = await api
+      .post('/posts')
+      .send({
+        body: 'Temporary',
+        media: [
+          { path: video.path, contentType: 'video/mp4', size: 5_000_000 },
+        ],
+        targets: [{ accountId: tiktokId }],
+      })
+      .expect(201);
+    await api.delete(`/posts/${post.body.id}`).expect(204);
+    const [deletion] = sent(`${UT}/v6/deleteFiles`);
+    expect(deletion.headers['x-uploadthing-api-key']).toBe('sk_test_fake');
+    expect(deletion.body).toMatchObject({ customIds: [video.path] });
   });
 
   it('refreshes an expired access token before calling TikTok', async () => {

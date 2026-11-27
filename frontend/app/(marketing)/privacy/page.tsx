@@ -84,7 +84,7 @@ const sections: LegalSection[] = [
         <p>We do not sell your personal data or share it for advertising. We share it only with:</p>
         <ul>
           <li><strong>The platforms you connect,</strong> which receive the content you publish to them and the credentials you gave us for them.</li>
-          <li><strong>Service providers</strong> that process data for us: our database and file storage host (Supabase), our application hosting provider, and Google (Gemini API, for AI features).</li>
+          <li><strong>Service providers</strong> that process data for us: our database host (Supabase), our file storage provider for uploaded media (UploadThing), our application hosting provider, and Google (Gemini API, for AI features).</li>
           <li><strong>Websites you link to:</strong> when a post contains a link, our server fetches that public page to build a preview card.</li>
           <li><strong>Authorities,</strong> when the law requires it.</li>
         </ul>
