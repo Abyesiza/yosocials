@@ -167,6 +167,7 @@ describe('TikTok', () => {
       scope:
         'user.info.basic,user.info.profile,video.publish,video.upload,video.list',
       state: res.body.state,
+      disable_auto_auth: '1',
     });
   });
 
