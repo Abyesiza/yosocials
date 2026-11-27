@@ -78,11 +78,11 @@ Each module keeps `entities/`, `dto/`, `enums/` or `interfaces/` apart from its 
 
 - **User**, **Workspace**, **WorkspaceMember** (with role): who can see and do what. Accounts and posts belong to a workspace, and deleting the workspace deletes them.
 - **SocialAccount**: one connected account or channel. Holds the persona, brand voice and encrypted credentials.
-- **Post**: one piece of content (`title`, `body`).
-- **PostTarget**: that post on one account. It has its own text, `scheduledAt`, status, publish result and latest metrics. The feed and the calendar both read from this table.
+- **Post**: one piece of content (`title`, `body`, `media`: one video or up to 35 images, stored in Supabase Storage).
+- **PostTarget**: that post on one account. It has its own text, platform `options` (TikTok privacy and interactions), `scheduledAt`, status, publish result and latest metrics. The feed and the calendar both read from this table.
 - **PostMetricSnapshot**: engagement for a target at one point in time, so you can see how a post moved after publishing.
 
-Target lifecycle: `draft → scheduled → publishing → published | failed`. Agent output always lands as `draft`. Nothing publishes until someone calls `POST /posts/:id/schedule` or `POST /posts/:id/publish`.
+Target lifecycle: `draft → scheduled → publishing → published | failed`. Platforms that finish publishing on their own time (TikTok) go `publishing → processing → published | failed`; the scheduler, or `POST /posts/:id/sync` from the post page, checks on them. Agent output always lands as `draft`. Nothing publishes until someone calls `POST /posts/:id/schedule` or `POST /posts/:id/publish`.
 
 ## Platforms
 
@@ -92,6 +92,7 @@ Target lifecycle: `draft → scheduled → publishing → published | failed`. A
 | Mastodon | instance URL + access token (`read:accounts read:statuses write:statuses`) | favourites, boosts, replies |
 | Telegram | bot token + channel; the bot must be an admin that can post | none (the Bot API can't read view counts) |
 | Discord | channel webhook URL | reaction count |
+| TikTok | OAuth sign-in (“Continue with TikTok”); needs a video or photos | views, likes, comments, shares |
 
 ### Bluesky
 
@@ -102,6 +103,15 @@ Built on the official SDK, following the [Bluesky API docs](https://bsky.network
 - **Posts:** `RichText.detectFacets()` turns links, @mentions and #hashtags into facets. The first link gets a website card (`app.bsky.embed.external`): we fetch its Open Graph data and upload the thumbnail with `uploadBlob`, re-encoded to JPEG under 1 MB so EXIF/GPS metadata is stripped.
 - **Link safety:** the URLs come from users, so `link-preview/safe-fetch.ts` only connects to public IPs. Each resolved address is checked inside the connection's own DNS lookup, so DNS rebinding can't get past it. It also only allows ports 80/443, re-validates every redirect, and caps size and time.
 - **Errors:** XRPC errors map to our retry and "needs reconnect" logic. `@atproto/lex` and `lex-password-session` ship separate error classes, so they're matched by shape, not `instanceof`.
+
+### TikTok
+
+Built on the [Content Posting API](https://developers.tiktok.com/doc/content-posting-api-get-started) and Login Kit.
+
+- **Connecting:** `POST /accounts/oauth/tiktok/start` returns TikTok’s authorize URL with a signed, 15-minute `state` bound to the workspace and user. TikTok redirects to the web app (`/integrations/tiktok/callback`), which checks the state against an httpOnly cookie and posts the code to `POST /accounts/oauth/tiktok/callback`. Tokens are stored encrypted in `provider_sessions` and refreshed before they expire. Disconnecting revokes them, unless another workspace uses the same TikTok account.
+- **Posting:** per target, `options.mode` is `direct` (Direct Post, `video.publish`) or `inbox` (a draft the creator finishes in TikTok, `video.upload`). Direct posts re-query creator info first and respect the creator’s privacy options, comment/Duet/Stitch settings and maximum video length. TikTok pulls media from `MEDIA_PUBLIC_BASE_URL`, so that domain must be verified on the TikTok app (URL properties).
+- **Status:** TikTok publishes asynchronously. Targets stay `processing` until the status endpoint reports `PUBLISH_COMPLETE` (or the creator posts the inbox draft). Video ids are 19-digit numbers, parsed as strings so they aren’t rounded.
+- **Review:** until TikTok audits the app, Direct Posts can only be private (“Only me”).
 
 To add a platform: add it to `common/enums/platform.enum.ts`, implement `PlatformProvider` in `modules/integrations/providers/<name>/`, and register it in `integrations.module.ts` and `integrations.registry.ts`. Then run `npm run migration:generate src/database/migrations/Add<Name>` to update the enum, and add the migration to `database/migrations/index.ts`.
 
@@ -118,5 +128,5 @@ To add a platform: add it to `common/enums/platform.enum.ts`, implement `Platfor
 ## Not built yet
 
 - Email: password reset, email verification and invitations for people without an account. `@nestjs/authentication` has handlers for these once an email sender is set up.
-- Media uploads (images and video).
-- OAuth platforms: Meta, X, LinkedIn, TikTok and YouTube.
+- Media for text platforms: Bluesky, Mastodon, Telegram and Discord still get the text only.
+- More OAuth platforms: Meta, X, LinkedIn and YouTube.

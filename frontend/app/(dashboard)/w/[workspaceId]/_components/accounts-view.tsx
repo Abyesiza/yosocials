@@ -1,24 +1,41 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { cn, EmptyState, ErrorNote, focusRing, PageHeader, PlatformIcon } from "@/app/components/ui";
+import { LuCircleCheck } from "react-icons/lu";
+import { cn, EmptyState, ErrorNote, focusRing, PageHeader, PlatformIcon, platformLabel } from "@/app/components/ui";
 import { RowsSkeleton } from "@/app/components/skeletons";
 import { useApi } from "@/app/lib/api/client";
 import type { Account, Platform, PlatformInfo } from "@/app/lib/api/types";
 import { AccountCard } from "./account-card";
 import { ConnectForm } from "./connect-form";
+import { OAuthConnect } from "./oauth-connect";
 import { useWorkspace } from "./workspace-context";
 
 export function AccountsView() {
-  const { base, can } = useWorkspace();
+  const { base, can, href } = useWorkspace();
+  const router = useRouter();
+  const query = useSearchParams();
+  const connected = query.get("connected");
+  const connectError = query.get("connect_error");
   const { data: accounts, error, mutate } = useApi<Account[]>(`${base}/accounts`);
   const { data: platforms } = useApi<PlatformInfo[]>("/integrations");
   const [connecting, setConnecting] = useState<Platform | null>(null);
   const admin = can("admin");
+  const chosen = platforms?.find((p) => p.platform === connecting);
+  const dismiss = () => router.replace(href("/accounts"));
 
   return (
     <div>
       <PageHeader eyebrow="Channels" title="Accounts" subtitle="The social accounts and channels this workspace posts to." />
+
+      {connected && (
+        <p role="status" className="mb-6 flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
+          <LuCircleCheck className="h-4 w-4 shrink-0" aria-hidden /> {platformLabel(connected)} is connected.
+          <button type="button" onClick={dismiss} className="ml-auto text-xs font-semibold underline underline-offset-4">Dismiss</button>
+        </p>
+      )}
+      {connectError && <div className="mb-6"><ErrorNote error={connectError} /></div>}
 
       {admin && (
         <section aria-labelledby="connect-heading" className="mb-10 space-y-4">
@@ -42,8 +59,9 @@ export function AccountsView() {
               </button>
             ))}
           </div>
-          {connecting && (
-            <ConnectForm key={connecting} platform={connecting} onDone={async () => { setConnecting(null); await mutate(); }} />
+          {chosen?.connect === "oauth" && <OAuthConnect key={chosen.platform} platform={chosen.platform} available={chosen.available} />}
+          {chosen?.connect === "credentials" && (
+            <ConnectForm key={chosen.platform} platform={chosen.platform} onDone={async () => { setConnecting(null); await mutate(); }} />
           )}
         </section>
       )}

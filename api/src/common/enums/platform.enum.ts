@@ -10,4 +10,5 @@ export enum Platform {
   Mastodon = 'mastodon',
   Telegram = 'telegram',
   Discord = 'discord',
+  TikTok = 'tiktok',
 }

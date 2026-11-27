@@ -46,7 +46,7 @@ export class PostsController {
     @CurrentWorkspace() ws: WorkspaceContext,
     @Body() dto: CreatePostDto,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(
+    return this.posts.respond(
       await this.posts.create(ws.workspaceId, dto, { createdById: ws.userId }),
     );
   }
@@ -57,7 +57,7 @@ export class PostsController {
     @Query() query: ListPostsQueryDto,
   ): Promise<Paginated<PostResponseDto>> {
     const page = await this.posts.findAll(ws.workspaceId, query);
-    return { ...page, items: page.items.map((p) => PostResponseDto.from(p)) };
+    return { ...page, items: page.items.map((p) => this.posts.respond(p)) };
   }
 
   @Get(':id')
@@ -66,7 +66,7 @@ export class PostsController {
     @CurrentWorkspace() ws: WorkspaceContext,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(await this.posts.findOne(ws.workspaceId, id));
+    return this.posts.respond(await this.posts.findOne(ws.workspaceId, id));
   }
 
   @Patch(':id')
@@ -77,9 +77,7 @@ export class PostsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePostDto,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(
-      await this.posts.update(ws.workspaceId, id, dto),
-    );
+    return this.posts.respond(await this.posts.update(ws.workspaceId, id, dto));
   }
 
   @Patch(':id/targets/:targetId')
@@ -91,7 +89,7 @@ export class PostsController {
     @Param('targetId', ParseUUIDPipe) targetId: string,
     @Body() dto: UpdatePostTargetDto,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(
+    return this.posts.respond(
       await this.posts.updateTarget(ws.workspaceId, id, targetId, dto),
     );
   }
@@ -105,7 +103,7 @@ export class PostsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SchedulePostDto,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(
+    return this.posts.respond(
       await this.posts.schedule(ws.workspaceId, id, dto),
     );
   }
@@ -118,9 +116,7 @@ export class PostsController {
     @CurrentWorkspace() ws: WorkspaceContext,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PostResponseDto> {
-    return PostResponseDto.from(
-      await this.posts.unschedule(ws.workspaceId, id),
-    );
+    return this.posts.respond(await this.posts.unschedule(ws.workspaceId, id));
   }
 
   @Delete(':id')

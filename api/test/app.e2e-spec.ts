@@ -142,10 +142,7 @@ describe('Aby Socials API', () => {
       .set('Origin', 'https://abysocials.com')
       .set('Access-Control-Request-Method', 'POST')
       .expect(204)
-      .expect(
-        'Access-Control-Allow-Origin',
-        'https://abysocials.com',
-      );
+      .expect('Access-Control-Allow-Origin', 'https://abysocials.com');
   });
 
   it('reports healthy with migrations applied', async () => {
@@ -171,7 +168,7 @@ describe('Aby Socials API', () => {
     const res = await http.get('/api/integrations').expect(200);
     expect(
       res.body.map((p: { platform: string }) => p.platform).sort(),
-    ).toEqual(['bluesky', 'discord', 'mastodon', 'telegram']);
+    ).toEqual(['bluesky', 'discord', 'mastodon', 'telegram', 'tiktok']);
   });
 
   it('connects accounts, never returning or storing plaintext credentials', async () => {

@@ -3,11 +3,11 @@
  * api/src/modules/*\/dto). Keep in sync when a DTO changes.
  */
 
-export type Platform = "bluesky" | "mastodon" | "telegram" | "discord";
+export type Platform = "bluesky" | "mastodon" | "telegram" | "discord" | "tiktok";
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer";
 export type AccountPersona = "individual" | "influencer" | "company";
 export type AccountStatus = "active" | "needs_reconnect";
-export type TargetStatus = "draft" | "scheduled" | "publishing" | "published" | "failed";
+export type TargetStatus = "draft" | "scheduled" | "publishing" | "processing" | "published" | "failed";
 export type PostStatus =
   | "draft"
   | "scheduled"
@@ -50,6 +50,56 @@ export interface PlatformInfo {
   maxTextLength: number;
   lengthUnit: "graphemes" | "characters";
   supportsMetrics: boolean;
+  connect: "credentials" | "oauth";
+  /** False while an OAuth platform's app credentials aren't configured. */
+  available: boolean;
+  /** null: text only; attached media isn't sent. */
+  media: { required: boolean; video: boolean; maxImages: number } | null;
+}
+
+export type MediaContentType = "video/mp4" | "video/quicktime" | "video/webm" | "image/jpeg" | "image/webp";
+
+export interface MediaItem {
+  path: string;
+  kind: "image" | "video";
+  contentType: MediaContentType;
+  size: number;
+  durationSec: number | null;
+  url: string;
+}
+
+export interface UploadTicket {
+  path: string;
+  uploadUrl: string;
+  publicUrl: string;
+}
+
+export type TikTokPrivacyLevel = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";
+
+export interface TikTokOptions {
+  mode: "direct" | "inbox";
+  privacyLevel?: TikTokPrivacyLevel;
+  allowComment?: boolean;
+  allowDuet?: boolean;
+  allowStitch?: boolean;
+  brandOrganic?: boolean;
+  brandedContent?: boolean;
+  isAigc?: boolean;
+  photoTitle?: string;
+  autoAddMusic?: boolean;
+}
+
+export interface TikTokCreatorInfo {
+  nickname: string;
+  username: string | null;
+  avatarUrl: string | null;
+  privacyLevelOptions: TikTokPrivacyLevel[];
+  commentDisabled: boolean;
+  duetDisabled: boolean;
+  stitchDisabled: boolean;
+  maxVideoPostDurationSec: number | null;
+  canDirectPost: boolean;
+  canUploadToInbox: boolean;
 }
 
 export interface Account {
@@ -81,6 +131,7 @@ export interface PostTarget {
   text: string;
   customText: boolean;
   status: TargetStatus;
+  options: Record<string, unknown> | null;
   scheduledAt: string | null;
   publishedAt: string | null;
   externalUrl: string | null;
@@ -92,6 +143,7 @@ export interface Post {
   id: string;
   title: string | null;
   body: string;
+  media: MediaItem[];
   source: "manual" | "agent";
   status: PostStatus;
   targets: PostTarget[];
@@ -102,6 +154,7 @@ export interface Post {
 export interface FeedItem extends PostTarget {
   postId: string;
   postTitle: string | null;
+  media: MediaItem[];
 }
 
 export interface Paginated<T> {

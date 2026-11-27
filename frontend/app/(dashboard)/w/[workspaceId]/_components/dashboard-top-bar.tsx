@@ -20,7 +20,7 @@ export function DashboardTopBar() {
       >
         <LuMenu className="h-5 w-5" />
       </button>
-      <Image src="/logo.png" alt="Aby Socials" width={500} height={500} className="h-7 w-7 md:hidden" />
+      <Image src="/logo.png" alt="Aby Socials" width={1024} height={1024} className="h-7 w-7 md:hidden" />
       <div className="flex-1" />
       {can("editor") && (
         <ButtonLink href={href("/create")} size="sm">

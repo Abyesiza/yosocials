@@ -21,7 +21,11 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   query?: Record<string, string | string[] | undefined>;
   json?: unknown;
+  /** Sent as application/x-www-form-urlencoded (OAuth token endpoints). */
+  form?: Record<string, string>;
   timeoutMs?: number;
+  /** Parse integers too big for a JS number (e.g. TikTok video ids) as strings. */
+  bigIntsAsStrings?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -43,14 +47,22 @@ export async function requestJson<T>(
     ...options.headers,
   };
   if (options.json !== undefined) headers['content-type'] = 'application/json';
+  if (options.form !== undefined) {
+    headers['content-type'] = 'application/x-www-form-urlencoded';
+  }
+  const payload =
+    options.form !== undefined
+      ? new URLSearchParams(options.form).toString()
+      : options.json === undefined
+        ? undefined
+        : JSON.stringify(options.json);
 
   let response: Response;
   try {
     response = await fetch(target, {
-      method: options.method ?? (options.json === undefined ? 'GET' : 'POST'),
+      method: options.method ?? (payload === undefined ? 'GET' : 'POST'),
       headers,
-      body:
-        options.json === undefined ? undefined : JSON.stringify(options.json),
+      body: payload,
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
   } catch (error) {
@@ -63,7 +75,9 @@ export async function requestJson<T>(
   }
 
   const text = await response.text();
-  const body: unknown = text ? safeParse(text) : undefined;
+  const body: unknown = text
+    ? safeParse(options.bigIntsAsStrings ? quoteBigInts(text) : text)
+    : undefined;
 
   if (!response.ok) {
     throw new PlatformApiError(
@@ -74,6 +88,11 @@ export async function requestJson<T>(
     );
   }
   return body as T;
+}
+
+/** Quotes bare integers of 16+ digits in JSON array or field positions, before JSON.parse rounds them. */
+function quoteBigInts(text: string): string {
+  return text.replace(/([[:,]\s*)(-?\d{16,})(?=\s*[,\]}])/g, '$1"$2"');
 }
 
 function safeParse(text: string): unknown {
@@ -90,7 +109,11 @@ function extractMessage(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
   const record = body as Record<string, unknown>;
   for (const key of ['message', 'error_description', 'description', 'error']) {
-    if (typeof record[key] === 'string') return record[key];
+    if (typeof record[key] === 'string' && record[key]) return record[key];
+  }
+  // TikTok nests it: { error: { code, message } }.
+  if (record.error && typeof record.error === 'object') {
+    return extractMessage(record.error);
   }
   return undefined;
 }

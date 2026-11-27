@@ -33,6 +33,7 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
     supportsMetrics: false,
     contentStyle:
       'Channel broadcast message. Can be longer and more detailed; emojis and short paragraphs work well.',
+    connect: 'credentials',
   };
 
   parseCredentials(raw: unknown): Promise<TelegramCredentialsDto> {

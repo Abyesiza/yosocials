@@ -40,6 +40,10 @@ export class PostTarget extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   text: string | null;
 
+  /** Platform-specific settings (e.g. TikTok privacy), validated by the provider. */
+  @Column({ type: 'jsonb', nullable: true })
+  options: Record<string, unknown> | null;
+
   @Column({ type: 'enum', enum: TargetStatus, default: TargetStatus.Draft })
   status: TargetStatus;
 

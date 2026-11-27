@@ -19,6 +19,9 @@ export class IntegrationsController {
       maxTextLength: p.capabilities.maxTextLength,
       lengthUnit: p.capabilities.lengthUnit,
       supportsMetrics: p.capabilities.supportsMetrics,
+      connect: p.capabilities.connect,
+      available: p.oauth?.isConfigured() ?? true,
+      media: p.capabilities.media ?? null,
     }));
   }
 }

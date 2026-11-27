@@ -1,6 +1,9 @@
 import type { DataSourceOptions } from 'typeorm';
 
-type PostgresConnectionOptions = Extract<DataSourceOptions, { type: 'postgres' }>;
+type PostgresConnectionOptions = Extract<
+  DataSourceOptions,
+  { type: 'postgres' }
+>;
 import { ENTITIES } from './entities.js';
 import { MIGRATIONS } from './migrations/index.js';
 

@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto.js';
 import { Platform } from '../../../common/enums/platform.enum.js';
-import { PostTargetResponseDto } from '../../posts/dto/post-response.dto.js';
+import {
+  PostMediaResponseDto,
+  PostTargetResponseDto,
+} from '../../posts/dto/post-response.dto.js';
 
 export class FeedQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: Platform })
@@ -38,4 +41,5 @@ export class CalendarQueryDto {
 export class FeedItemDto extends PostTargetResponseDto {
   @ApiProperty() postId: string;
   @ApiPropertyOptional({ nullable: true }) postTitle: string | null;
+  @ApiProperty({ type: [PostMediaResponseDto] }) media: PostMediaResponseDto[];
 }

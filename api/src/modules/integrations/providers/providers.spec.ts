@@ -28,6 +28,8 @@ describe('MastodonProvider', () => {
     const result = await new MastodonProvider().publish(creds, {
       text: 'hi',
       idempotencyKey: 'target-1',
+      media: [],
+      options: null,
     });
     expect(calls[0].headers['idempotency-key']).toBe('target-1');
     expect(calls[0].body).toEqual({ status: 'hi', visibility: 'public' });
@@ -123,7 +125,7 @@ describe('DiscordProvider', () => {
     });
     const result = await new DiscordProvider().publish(
       { webhookUrl },
-      { text: '@everyone hi', idempotencyKey: 'k' },
+      { text: '@everyone hi', idempotencyKey: 'k', media: [], options: null },
     );
     expect(calls[0].url.searchParams.get('wait')).toBe('true');
     expect(calls[0].body).toEqual({

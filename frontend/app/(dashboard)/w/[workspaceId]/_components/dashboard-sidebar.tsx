@@ -44,7 +44,7 @@ export function DashboardSidebar() {
       >
         <div className="mb-5 flex items-center justify-between px-2">
           <Link href={href()} onClick={close} className={cn("flex items-center gap-2 rounded-md", focusRing)}>
-            <Image src="/logo.png" alt="" width={500} height={500} className="h-8 w-8" />
+            <Image src="/logo.png" alt="" width={1024} height={1024} className="h-8 w-8" />
             <span className="text-lg font-bold tracking-tight text-foreground">Aby Socials</span>
           </Link>
           <button

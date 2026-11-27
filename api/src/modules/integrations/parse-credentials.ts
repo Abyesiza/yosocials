@@ -9,9 +9,10 @@ import { validate } from 'class-validator';
 export async function parseCredentialsDto<T extends object>(
   dto: ClassConstructor<T>,
   raw: unknown,
+  field = 'credentials',
 ): Promise<T> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new BadRequestException('credentials must be an object');
+    throw new BadRequestException(`${field} must be an object`);
   }
   const instance = plainToInstance(dto, raw);
   const errors = await validate(instance, {
@@ -21,7 +22,7 @@ export async function parseCredentialsDto<T extends object>(
   if (errors.length > 0) {
     throw new BadRequestException(
       errors.flatMap((e) =>
-        Object.values(e.constraints ?? {}).map((m) => `credentials.${m}`),
+        Object.values(e.constraints ?? {}).map((m) => `${field}.${m}`),
       ),
     );
   }

@@ -120,6 +120,8 @@ describe('BlueskyProvider (official SDK)', () => {
     const result = await provider.publish(creds, {
       text: 'Hi @friend.bsky.social see https://example.com #launch',
       idempotencyKey: 'k',
+      media: [],
+      options: null,
     });
 
     expect(result.externalId).toBe(
@@ -145,7 +147,12 @@ describe('BlueskyProvider (official SDK)', () => {
   it('resumes the stored session instead of logging in again', async () => {
     const { provider, store } = setup();
     mockFetch(routes());
-    await provider.publish(creds, { text: 'first', idempotencyKey: '1' });
+    await provider.publish(creds, {
+      text: 'first',
+      idempotencyKey: '1',
+      media: [],
+      options: null,
+    });
 
     const second = setup();
     second.store.data.set(...[...store.data.entries()][0]);
@@ -153,6 +160,8 @@ describe('BlueskyProvider (official SDK)', () => {
     await second.provider.publish(creds, {
       text: 'second',
       idempotencyKey: '2',
+      media: [],
+      options: null,
     });
 
     expect(calls.map(path)).not.toContain('com.atproto.server.createSession');
@@ -175,7 +184,12 @@ describe('BlueskyProvider (official SDK)', () => {
       }),
     );
 
-    await provider.publish(creds, { text: 'hello', idempotencyKey: 'k' });
+    await provider.publish(creds, {
+      text: 'hello',
+      idempotencyKey: 'k',
+      media: [],
+      options: null,
+    });
 
     expect(calls.map(path)).toContain('com.atproto.server.createSession');
   });
@@ -205,6 +219,8 @@ describe('BlueskyProvider (official SDK)', () => {
     await provider.publish(creds, {
       text: 'New menu https://example.com/menu',
       idempotencyKey: 'k',
+      media: [],
+      options: null,
     });
 
     expect(fetchPreview).toHaveBeenCalledWith('https://example.com/menu');

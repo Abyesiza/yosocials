@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   Matches,
   Max,
   Min,
@@ -38,7 +39,8 @@ export class EnvironmentVariables {
 
   /** Origin of the Next.js web app, allowed through CORS. */
   @IsString()
-  WEB_ORIGIN = 'http://localhost:3000,https://abysocials.com,https://www.abysocials.com,https://yosocials.vercel.app';
+  WEB_ORIGIN =
+    'http://localhost:3000,https://abysocials.com,https://www.abysocials.com,https://yosocials.vercel.app';
 
   /** Postgres connection string, e.g. postgres://user:pass@host:5432/db */
   @IsString()
@@ -91,6 +93,51 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   GEMINI_FALLBACK_MODELS?: string = 'gemini-3.8-flash';
+
+  /** TikTok app credentials from developers.tiktok.com. TikTok stays unavailable until all three are set. */
+  @IsOptional()
+  @IsString()
+  TIKTOK_CLIENT_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  TIKTOK_CLIENT_SECRET?: string;
+
+  /** Must match a redirect URI registered on the TikTok app exactly. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  TIKTOK_REDIRECT_URI?: string;
+
+  /** Comma-separated scopes; each must be added to the TikTok app. */
+  @IsString()
+  TIKTOK_SCOPES =
+    'user.info.basic,user.info.profile,video.publish,video.upload,video.list';
+
+  /** Supabase project URL and service-role key, for media uploads (Supabase Storage). */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  SUPABASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+
+  /** Public Supabase Storage bucket for uploaded media. Created on first upload. */
+  @IsString()
+  MEDIA_BUCKET = 'media';
+
+  /**
+   * Public base URL media is served from. The web app proxies `/media/*` to
+   * the bucket, so platforms that pull media (TikTok) see a verified domain.
+   */
+  @IsUrl({ require_tld: false, require_protocol: true })
+  MEDIA_PUBLIC_BASE_URL = 'https://abysocials.com/media';
+
+  /** Largest upload accepted, in bytes. Supabase's own project limit also applies. */
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  MEDIA_MAX_BYTES = 500 * 1024 * 1024;
 
   /**
    * Turn the publish/metrics cron jobs off, e.g. on extra API replicas.
