@@ -11,8 +11,8 @@ export const NAV_LINKS = [
 ];
 
 export const SCREENS = {
-  feed: { src: "/marketing/feed-desktop.png", alt: "Yo Socials home feed showing posts from Bluesky and Mastodon with likes, reposts and replies" },
-  phone: { src: "/marketing/feed-phone.png", alt: "Yo Socials feed on a phone" },
+  feed: { src: "/marketing/feed-desktop.png", alt: "Aby Socials home feed showing posts from Bluesky and Mastodon with likes, reposts and replies" },
+  phone: { src: "/marketing/feed-phone.png", alt: "Aby Socials feed on a phone" },
   accounts: { src: "/marketing/accounts-desktop.png", alt: "Connecting Bluesky, Mastodon, Telegram and Discord accounts" },
   create: { src: "/marketing/create-desktop.png", alt: "Writing one post with a separate preview and character limit for each platform" },
   calendar: { src: "/marketing/calendar-desktop.png", alt: "Weekly content calendar with drafts, scheduled and published posts" },

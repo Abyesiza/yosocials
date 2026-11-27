@@ -54,7 +54,7 @@ async function handle(request: NextRequest, { params }: Context) {
   }
   if (!upstream) {
     return NextResponse.json(
-      { message: "The Yo Socials API is not reachable" },
+      { message: "The Aby Socials API is not reachable" },
       { status: 502 },
     );
   }

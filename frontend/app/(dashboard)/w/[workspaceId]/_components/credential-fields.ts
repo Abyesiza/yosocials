@@ -13,7 +13,7 @@ export const CREDENTIAL_FIELDS: Record<Platform, CredentialSpec> = {
     intro: "Bluesky connects with your handle and an app password. Never use your main password.",
     steps: [
       "Open Bluesky and go to Settings → Privacy and security → App passwords.",
-      "Click Add App Password and give it a name, for example “YoSocials”.",
+      "Click Add App Password and give it a name, for example “AbySocials”.",
       "Copy the generated password (xxxx-xxxx-xxxx-xxxx). Bluesky only shows it once.",
       "Enter your full handle below, for example you.bsky.social, and paste the app password.",
     ],
@@ -29,7 +29,7 @@ export const CREDENTIAL_FIELDS: Record<Platform, CredentialSpec> = {
     steps: [
       "Sign in to your Mastodon instance in a browser.",
       "Go to Preferences → Development and click New application.",
-      "Name it, for example “YoSocials”, and tick the scopes read:accounts, read:statuses and write:statuses. Untick the rest.",
+      "Name it, for example “AbySocials”, and tick the scopes read:accounts, read:statuses and write:statuses. Untick the rest.",
       "Click Submit, open the new application and copy “Your access token”.",
       "Enter your instance URL below, for example https://mastodon.social, and paste the token.",
     ],

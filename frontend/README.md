@@ -1,4 +1,4 @@
-# Yo Socials
+# Aby Socials
 
 Plan, publish and track posts across every platform in one place.
 

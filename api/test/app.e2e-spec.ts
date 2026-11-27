@@ -54,7 +54,7 @@ function stubPlatforms() {
         id: '42',
         username: 'yo',
         acct: 'yo',
-        display_name: 'Yo Socials',
+        display_name: 'Aby Socials',
         url: 'https://mastodon.social/@yo',
         avatar: 'https://files/avatar.png',
       },
@@ -135,16 +135,16 @@ afterEach(() => vi.unstubAllGlobals());
 
 afterAll(() => t?.close());
 
-describe('Yo Socials API', () => {
+describe('Aby Socials API', () => {
   it('allows the deployed frontend origin through CORS', async () => {
     await http
       .options('/api/health')
-      .set('Origin', 'https://yosocials.vercel.app')
+      .set('Origin', 'https://abysocials.com')
       .set('Access-Control-Request-Method', 'POST')
       .expect(204)
       .expect(
         'Access-Control-Allow-Origin',
-        'https://yosocials.vercel.app',
+        'https://abysocials.com',
       );
   });
 

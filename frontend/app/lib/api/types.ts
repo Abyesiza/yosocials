@@ -1,5 +1,5 @@
 /**
- * Response and request shapes of the Yo Socials API (mirrors the DTOs in
+ * Response and request shapes of the Aby Socials API (mirrors the DTOs in
  * api/src/modules/*\/dto). Keep in sync when a DTO changes.
  */
 

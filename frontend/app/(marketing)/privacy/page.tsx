@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/app/lib/seo";
 import Link from "next/link";
+import { SITE } from "@/app/lib/site";
 import { LEGAL, PLATFORM_POLICIES } from "../_components/legal/legal-config";
 import { Ext, LegalDocument, type LegalSection } from "../_components/legal/legal-document";
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
   title: "Privacy Policy",
   description: `How ${LEGAL.product} collects, uses, protects and deletes your data.`,
-  alternates: { canonical: "/privacy" },
-};
+  path: "/privacy",
+});
 
 const sections: LegalSection[] = [
   {
@@ -15,7 +16,7 @@ const sections: LegalSection[] = [
     title: "Who we are",
     body: (
       <p>
-        {LEGAL.product} is operated by {LEGAL.legalEntity}, {LEGAL.address} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). We are
+        {LEGAL.product} ({SITE.domain}) is owned and operated by {LEGAL.legalEntity}, {LEGAL.address} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). We are
         the controller of the personal data described here. Questions about privacy go to{" "}
         <a href={`mailto:${LEGAL.privacyEmail}`}>{LEGAL.privacyEmail}</a>.
       </p>

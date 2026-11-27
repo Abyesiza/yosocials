@@ -13,7 +13,7 @@ export function Hero() {
             Plan, post and grow on <span className="gradient-text">every platform</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">
-            Yo Socials drafts a content calendar for each of your accounts, publishes on time and shows how every post performs. One home for every channel you run.
+            Aby Socials drafts a content calendar for each of your accounts, publishes on time and shows how every post performs. One home for every channel you run.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <PillButton href="/signup" className="h-12 px-7 text-base">Get started free</PillButton>

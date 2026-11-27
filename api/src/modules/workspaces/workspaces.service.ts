@@ -101,7 +101,7 @@ export class WorkspacesService {
     const user = await this.users.findByEmail(dto.email);
     if (!user) {
       throw new NotFoundException(
-        'No Yo Socials account uses that email. Ask them to sign up first.',
+        'No Aby Socials account uses that email. Ask them to sign up first.',
       );
     }
     if (

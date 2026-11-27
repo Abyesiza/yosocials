@@ -1,16 +1,18 @@
+import { SITE } from "@/app/lib/site";
+
 /**
  * Facts the legal pages state about the business. Replace every "[…]" value:
  * the pages show a draft banner until none are left.
  */
 export const LEGAL = {
-  product: "Yo Socials",
-  legalEntity: "[Registered company name]",
+  product: SITE.name,
+  legalEntity: `${SITE.owner.name} (${SITE.owner.form})`,
   address: "[Registered business address]",
-  contactEmail: "[support@yourdomain.com]",
-  privacyEmail: "[privacy@yourdomain.com]",
+  contactEmail: SITE.email.support,
+  privacyEmail: SITE.email.privacy,
   governingLaw: "[Country or state whose law governs these terms]",
   minimumAge: 13,
-  effectiveDate: "19 November 2026",
+  effectiveDate: "27 November 2026",
 } as const;
 
 export const hasPlaceholders = () => Object.values(LEGAL).some((v) => typeof v === "string" && v.startsWith("["));

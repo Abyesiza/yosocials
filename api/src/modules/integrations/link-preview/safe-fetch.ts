@@ -107,7 +107,7 @@ export async function safeFetch(
       redirect: 'manual',
       signal,
       headers: {
-        'user-agent': 'YoSocialsBot/1.0 (+link previews)',
+        'user-agent': 'AbySocialsBot/1.0 (+link previews)',
         accept: 'text/html,image/*;q=0.9,*/*;q=0.5',
       },
     });

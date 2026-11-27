@@ -44,7 +44,7 @@ export function PostView() {
     });
 
   const remove = () => {
-    if (!confirm("Delete this post from Yo Socials? Anything already published stays live.")) return;
+    if (!confirm("Delete this post from Aby Socials? Anything already published stays live.")) return;
     void run("delete", async () => {
       await api(`${base}/posts/${post.id}`, { method: "DELETE" });
       router.push(href());

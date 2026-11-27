@@ -61,7 +61,7 @@ function EmptyFeed({ hasAccounts, canCreate, canConnect, href }: { hasAccounts: 
     return (
       <EmptyState
         title="Nothing published yet"
-        body="Posts you publish from Yo Socials show up here with their likes, reposts and replies."
+        body="Posts you publish from Aby Socials show up here with their likes, reposts and replies."
         action={canCreate && <ButtonLink href={href("/create")}>Create a post</ButtonLink>}
       />
     );

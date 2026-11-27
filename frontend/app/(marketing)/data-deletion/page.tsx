@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/app/lib/seo";
 import Link from "next/link";
 import { LEGAL, PLATFORM_POLICIES } from "../_components/legal/legal-config";
 import { Ext, LegalDocument, type LegalSection } from "../_components/legal/legal-document";
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
   title: "Data deletion",
   description: `How to delete your ${LEGAL.product} account and data, and revoke platform access.`,
-  alternates: { canonical: "/data-deletion" },
-};
+  path: "/data-deletion",
+});
 
 const REVOKE = [
-  { name: "Bluesky", how: "Settings → Privacy and security → App passwords → delete the Yo Socials password." },
+  { name: "Bluesky", how: "Settings → Privacy and security → App passwords → delete the Aby Socials password." },
   { name: "Mastodon", how: "On your server: Preferences → Development (or Account → Authorized apps) → remove the application." },
   { name: "Telegram", how: "Remove the bot from your channel's administrators, or revoke its token with @BotFather." },
   { name: "Discord", how: "Server Settings → Integrations → Webhooks → delete the webhook." },

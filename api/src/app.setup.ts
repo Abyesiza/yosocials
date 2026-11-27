@@ -26,7 +26,7 @@ export function configureApp(app: INestApplication): void {
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Yo Socials API')
+      .setTitle('Aby Socials API')
       .setDescription('Plan, publish and track posts across every platform.')
       .setVersion('0.2.0')
       .addBearerAuth()

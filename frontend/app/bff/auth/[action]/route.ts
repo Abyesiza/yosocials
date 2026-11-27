@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     });
   } catch {
     return NextResponse.json(
-      { message: "The Yo Socials API is not reachable" },
+      { message: "The Aby Socials API is not reachable" },
       { status: 502 },
     );
   }

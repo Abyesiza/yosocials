@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/app/lib/seo";
 import { Suspense } from "react";
 import { FormSkeleton } from "@/app/components/skeletons";
 import { AuthForm } from "../auth-form";
 
-export const metadata: Metadata = { title: "Log in" };
+export const metadata = publicPageMetadata({
+  title: "Log in",
+  description: "Log in to Aby Socials to plan, schedule and track your social media posts.",
+  path: "/signin",
+});
 
 export default function Page() {
   return (

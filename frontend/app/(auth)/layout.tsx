@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       <div className="relative w-full max-w-sm rounded-lg border border-border bg-card px-8 py-10 shadow-sm">
         <Link href="/" className="mb-8 flex flex-col items-center gap-3">
           <Image src="/logo.png" alt="" width={500} height={500} className="h-14 w-14" priority />
-          <span className="text-2xl font-bold tracking-tight text-foreground">Yo Socials</span>
+          <span className="text-2xl font-bold tracking-tight text-foreground">Aby Socials</span>
         </Link>
         {children}
       </div>

@@ -227,7 +227,7 @@ export class PostsService {
     return this.findOne(workspaceId, post.id);
   }
 
-  /** Removes the post from Yo Socials. Already-published posts stay live. */
+  /** Removes the post from Aby Socials. Already-published posts stay live. */
   async remove(workspaceId: string, id: string): Promise<void> {
     const post = await this.findOne(workspaceId, id);
     this.assertNotPublishing(post);

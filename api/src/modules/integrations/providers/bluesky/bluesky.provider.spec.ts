@@ -72,7 +72,7 @@ const routes = (
     body: {
       did: DID,
       handle: HANDLE,
-      displayName: 'Yo Socials',
+      displayName: 'Aby Socials',
       avatar: 'https://cdn.bsky.app/a.jpg',
     },
   }),
@@ -97,7 +97,7 @@ describe('BlueskyProvider (official SDK)', () => {
     expect(account).toEqual({
       externalId: DID,
       handle: HANDLE,
-      displayName: 'Yo Socials',
+      displayName: 'Aby Socials',
       profileUrl: `https://bsky.app/profile/${HANDLE}`,
       avatarUrl: 'https://cdn.bsky.app/a.jpg',
     });
