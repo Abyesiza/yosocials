@@ -84,6 +84,8 @@ export class TikTokApi {
       response_type: 'code',
       redirect_uri: redirectUri,
       state,
+      // Always show the consent screen, so creators see exactly what they grant.
+      disable_auto_auth: '1',
     }).toString();
     return url.toString();
   }
