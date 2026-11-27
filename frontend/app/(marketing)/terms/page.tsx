@@ -1,8 +1,8 @@
 import { publicPageMetadata } from "@/app/lib/seo";
 import Link from "next/link";
 import { SITE } from "@/app/lib/site";
-import { LEGAL } from "../_components/legal/legal-config";
-import { LegalDocument, type LegalSection } from "../_components/legal/legal-document";
+import { LEGAL, PLATFORM_POLICIES } from "../_components/legal/legal-config";
+import { Ext, LegalDocument, type LegalSection } from "../_components/legal/legal-document";
 
 export const metadata = publicPageMetadata({
   title: "Terms of Service",
@@ -57,6 +57,29 @@ const sections: LegalSection[] = [
         <p>
           {LEGAL.product} is independent and is not affiliated with, endorsed by or sponsored by any of the platforms it works
           with. Platforms can change or withdraw their APIs at any time, which can limit what we can offer.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "platform-terms",
+    title: "Third-party platform terms",
+    body: (
+      <>
+        <p>
+          When you connect an account from one of these platforms, you also agree to that platform&apos;s terms, and its
+          privacy policy applies to the data it holds. Breaking a platform&apos;s terms through {LEGAL.product} also breaks these terms.
+        </p>
+        <ul>
+          {PLATFORM_POLICIES.map((p) => (
+            <li key={p.name}>
+              <strong>{p.name}{p.live ? "" : " (when available)"}:</strong> <Ext href={p.terms}>terms</Ext> · <Ext href={p.privacy}>privacy policy</Ext>
+            </li>
+          ))}
+        </ul>
+        <p>
+          {LEGAL.product} uses YouTube API Services. By connecting a YouTube channel, you agree to be bound by the{" "}
+          <Ext href="https://www.youtube.com/t/terms">YouTube Terms of Service</Ext>.
         </p>
       </>
     ),
@@ -144,7 +167,7 @@ const sections: LegalSection[] = [
   {
     id: "law",
     title: "Governing law",
-    body: <p>These terms are governed by the laws of {LEGAL.governingLaw}. This does not remove any protection you have under the consumer laws of the country where you live.</p>,
+    body: <p>These terms are governed by the laws of the country in which {LEGAL.legalEntity} is incorporated. This does not remove any protection you have under the consumer laws of the country where you live.</p>,
   },
   {
     id: "changes",
@@ -154,7 +177,7 @@ const sections: LegalSection[] = [
   {
     id: "contact",
     title: "Contact",
-    body: <p>{LEGAL.legalEntity}, {LEGAL.address}. Email: <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a>.</p>,
+    body: <p>{LEGAL.product} is owned and operated by {LEGAL.legalEntity}. Email: <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a>.</p>,
   },
 ];
 
