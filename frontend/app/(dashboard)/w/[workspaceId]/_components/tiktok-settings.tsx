@@ -106,7 +106,7 @@ export function TikTokSettings({
 
       {direct && (
         <>
-          <Field label="Who can see this post">
+          <Field label="Who can see this post" hint="While TikTok is still reviewing Aby Socials, the TikTok account must be private (Settings and privacy → Privacy → Private account) and posts must be “Only me”.">
             <Select value={value?.privacyLevel ?? ""} onChange={(e) => set({ privacyLevel: (e.target.value || undefined) as TikTokPrivacyLevel | undefined })} aria-invalid={!value?.privacyLevel}>
               <option value="" disabled>Choose who can see it</option>
               {(info?.privacyLevelOptions ?? []).map((level) => (
