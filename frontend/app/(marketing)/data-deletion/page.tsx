@@ -65,9 +65,15 @@ const sections: LegalSection[] = [
         <ul>
           {REVOKE.map((r) => <li key={r.name}><strong>{r.name}:</strong> {r.how}</li>)}
           <li><strong>Google and YouTube:</strong> <Ext href="https://security.google.com/settings/security/permissions">Google account permissions</Ext>.</li>
-          <li><strong>Facebook and Instagram:</strong> Settings → Apps and websites → remove {LEGAL.product}.</li>
+          <li><strong>Facebook:</strong> Settings &amp; privacy → Settings → Business integrations (or Apps and websites) → remove {LEGAL.product}.</li>
+          <li><strong>Instagram and Threads:</strong> Settings → Website permissions → Apps and websites → remove {LEGAL.product}.</li>
+          <li><strong>TikTok:</strong> Settings and privacy → Security and permissions → Apps and services permissions → remove {LEGAL.product}.</li>
+          <li><strong>X:</strong> Settings and privacy → Security and account access → Apps and sessions → Connected apps → revoke {LEGAL.product}.</li>
+          <li><strong>LinkedIn:</strong> Settings → Data privacy → Permitted services → remove {LEGAL.product}.</li>
+          <li><strong>Pinterest:</strong> Settings → Security and logins → Apps → revoke {LEGAL.product}.</li>
         </ul>
-        <p className="text-sm">Platform policies: {PLATFORM_POLICIES.filter((p) => p.live).map((p, i) => <span key={p.name}>{i > 0 && " · "}<Ext href={p.privacy}>{p.name}</Ext></span>)}.</p>
+        <p>When you revoke access on a platform, we can no longer use it, and we delete the data and tokens we hold for that account within 30 days.</p>
+        <p className="text-sm">Platform policies: {PLATFORM_POLICIES.map((p, i) => <span key={p.name}>{i > 0 && " · "}<Ext href={p.privacy}>{p.name}</Ext></span>)}.</p>
       </>
     ),
   },
@@ -88,7 +94,7 @@ const sections: LegalSection[] = [
       <p>
         If you can&apos;t sign in, or you connected an account through a platform login, email{" "}
         <a href={`mailto:${LEGAL.privacyEmail}?subject=Data%20deletion%20request`}>{LEGAL.privacyEmail}</a> from the address on
-        your account, and we will confirm when the data is gone, within 30 days.
+        your account. Tell us which account or platform the request is about. We will confirm by email when the data is gone, within 30 days.
       </p>
     ),
   },

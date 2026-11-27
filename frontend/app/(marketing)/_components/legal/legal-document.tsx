@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { cn, focusRing } from "@/app/components/ui";
 import { SiteFooter } from "../site-footer";
 import { SiteHeader } from "../site-header";
-import { hasPlaceholders, LEGAL } from "./legal-config";
+import { LEGAL } from "./legal-config";
 
 export interface LegalSection {
   id: string;
@@ -23,11 +23,6 @@ export function LegalDocument({ title, intro, sections, current }: { title: stri
     <>
       <SiteHeader />
       <main id="main" className="flex-1">
-        {hasPlaceholders() && (
-          <p role="note" className="border-b border-warning/30 bg-warning/10 px-4 py-3 text-center text-sm font-medium text-warning">
-            Draft: company details in <code>legal-config.ts</code> still need filling in before this page is published.
-          </p>
-        )}
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:px-8 lg:py-20">
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <nav aria-label="Legal documents" className="flex flex-wrap gap-2 lg:flex-col">

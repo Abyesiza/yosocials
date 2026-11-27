@@ -16,7 +16,7 @@ const sections: LegalSection[] = [
     title: "Who we are",
     body: (
       <p>
-        {LEGAL.product} ({SITE.domain}) is owned and operated by {LEGAL.legalEntity}, {LEGAL.address} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). We are
+        {LEGAL.product} ({SITE.domain}) is owned and operated by {LEGAL.legalEntity} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). We are
         the controller of the personal data described here. Questions about privacy go to{" "}
         <a href={`mailto:${LEGAL.privacyEmail}`}>{LEGAL.privacyEmail}</a>.
       </p>
@@ -112,6 +112,37 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "platform-data",
+    title: "Data we receive from social platforms",
+    body: (
+      <>
+        <p>
+          When you connect an account by signing in to a platform (for example with Facebook, Instagram, Threads, YouTube,
+          TikTok, X, LinkedIn or Pinterest login), we ask only for the permissions needed for the features you use, and we
+          show them on the platform&apos;s consent screen before you agree. Depending on the platform, we receive:
+        </p>
+        <ul>
+          <li><strong>Basic profile:</strong> account or page ID, name, username, profile picture and profile link, so you can see which account is connected.</li>
+          <li><strong>Publishing access:</strong> permission to create posts, videos or messages that you write or approve in {LEGAL.product}, on the accounts, pages or channels you choose.</li>
+          <li><strong>Performance data:</strong> public metrics and insights (such as views, likes, comments and shares) for posts published through {LEGAL.product}, to show you how they perform.</li>
+          <li><strong>Access tokens:</strong> the tokens the platform issues so we can act for you, encrypted at rest.</li>
+        </ul>
+        <p>We use this data only to provide the features you asked for. In particular, we:</p>
+        <ul>
+          <li>do not sell platform data, share it with data brokers or use it for advertising;</li>
+          <li>do not use platform data to train AI or machine-learning models;</li>
+          <li>do not read private messages, follower lists or other accounts&apos; data beyond what is listed above;</li>
+          <li>do not let other users see your platform data, except members of the workspace you connected the account to;</li>
+          <li>delete a platform&apos;s data and tokens when you disconnect the account, delete the workspace or delete your account, and within 30 days when you revoke our access on the platform or ask us to.</li>
+        </ul>
+        <p>
+          For step-by-step deletion instructions, see our <Link href="/data-deletion">data deletion page</Link> at{" "}
+          <a href={`${SITE.url}/data-deletion`}>{SITE.domain}/data-deletion</a>.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "google",
     title: "Google and YouTube data",
     body: (
@@ -121,7 +152,7 @@ const sections: LegalSection[] = [
           <Ext href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</Ext>, including the Limited Use requirements.
         </p>
         <p>
-          When you connect YouTube, you agree to be bound by the <Ext href="https://www.youtube.com/t/terms">YouTube Terms of Service</Ext>,
+          {LEGAL.product} uses YouTube API Services. When you connect YouTube, you agree to be bound by the <Ext href="https://www.youtube.com/t/terms">YouTube Terms of Service</Ext>,
           and Google&apos;s use of your data is covered by the <Ext href="https://policies.google.com/privacy">Google Privacy Policy</Ext>.
           You can revoke our access at any time on the <Ext href="https://security.google.com/settings/security/permissions">Google security settings page</Ext>.
         </p>

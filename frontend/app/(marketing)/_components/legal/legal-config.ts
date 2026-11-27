@@ -1,21 +1,14 @@
 import { SITE } from "@/app/lib/site";
 
-/**
- * Facts the legal pages state about the business. Replace every "[…]" value:
- * the pages show a draft banner until none are left.
- */
+/** Facts the legal pages state about the business. */
 export const LEGAL = {
   product: SITE.name,
   legalEntity: `${SITE.owner.name} (${SITE.owner.form})`,
-  address: "[Registered business address]",
   contactEmail: SITE.email.support,
   privacyEmail: SITE.email.privacy,
-  governingLaw: "[Country or state whose law governs these terms]",
   minimumAge: 13,
   effectiveDate: "27 November 2026",
 } as const;
-
-export const hasPlaceholders = () => Object.values(LEGAL).some((v) => typeof v === "string" && v.startsWith("["));
 
 /** Official policies of the platforms users can connect (see app/lib/platforms.ts). */
 export const PLATFORM_POLICIES = [
