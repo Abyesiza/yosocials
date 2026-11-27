@@ -35,7 +35,7 @@ const FRIENDLY: Record<string, string> = {
   reached_active_user_cap:
     'TikTok’s daily limit of creators posting through Aby Socials was reached. Try again tomorrow.',
   unaudited_client_can_only_post_to_private_accounts:
-    'Until TikTok finishes reviewing Aby Socials, posts can only be private. Choose “Only me”.',
+    'Until TikTok approves Aby Socials, it can only post to private TikTok accounts. In the TikTok app, turn on Settings and privacy → Privacy → Private account, then post again with “Only me”.',
   url_ownership_unverified:
     'TikTok couldn’t verify where the media is hosted. The media domain must be verified on the TikTok app.',
   privacy_level_option_mismatch:

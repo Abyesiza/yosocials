@@ -4,15 +4,19 @@ import { useRef, useState } from "react";
 import { LuImagePlus, LuX } from "react-icons/lu";
 import { Card, cn, ErrorNote, focusRing } from "@/app/components/ui";
 import type { MediaContentType, MediaItem } from "@/app/lib/api/types";
+import { inspect, prepareImage, prepareVideo, suggestFraming, type Framing, type PreparedFile } from "@/app/lib/media/prepare";
 import { uploadFiles } from "@/app/lib/uploadthing";
+import { MediaPrepPanel, type PendingFile, type PrepProgress } from "./media-prep-panel";
 import { useWorkspace } from "./workspace-context";
 
+// PNG is accepted and converted to JPEG before upload; TikTok takes JPEG and WebP photos.
 const TYPES: Record<string, MediaItem["kind"]> = {
   "video/mp4": "video",
   "video/quicktime": "video",
   "video/webm": "video",
   "image/jpeg": "image",
   "image/webp": "image",
+  "image/png": "image",
 };
 const MAX_IMAGES = 35;
 
@@ -22,45 +26,62 @@ export type DraftMedia = Omit<MediaItem, "url"> & { url: string; preview?: strin
 export const toMediaBody = (media: DraftMedia[]) =>
   media.map(({ path, contentType, size, durationSec }) => ({ path, contentType, size, ...(durationSec != null && { durationSec }) }));
 
-function videoDuration(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
-    const video = document.createElement("video");
-    const url = URL.createObjectURL(file);
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      resolve(Number.isFinite(video.duration) ? video.duration : null);
-    };
-    video.onerror = () => resolve(null);
-    video.src = url;
-  });
-}
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
-/** Attach one video, or up to 35 photos. Files go straight to UploadThing, never through our servers. */
+/** Attach one video, or up to 35 photos, formatted for TikTok in the browser, then sent straight to UploadThing. */
 export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]; onChange: (media: DraftMedia[]) => void; disabled?: boolean }) {
   const { workspaceId } = useWorkspace();
   const input = useRef<HTMLInputElement>(null);
-  const [uploads, setUploads] = useState<Record<string, number>>({});
+  const [pending, setPending] = useState<PendingFile[]>([]);
+  const [framing, setFraming] = useState<Framing>("fit");
+  const [progress, setProgress] = useState<PrepProgress | null>(null);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const busy = Object.keys(uploads).length > 0;
 
-  async function add(files: File[]) {
+  async function choose(files: File[]) {
     setError(null);
     const kinds = files.map((f) => TYPES[f.type]);
-    if (kinds.some((k) => !k)) return setError(new Error("Use MP4, MOV or WebM videos, or JPEG or WebP photos."));
+    if (kinds.some((k) => !k)) return setError(new Error("Use MP4, MOV or WebM videos, or JPEG, PNG or WebP photos."));
     const all = [...media.map((m) => m.kind), ...kinds];
     if (all.includes("video") && all.length > 1) return setError(new Error("Attach one video, or photos only. Videos and photos can’t be mixed."));
     if (all.length > MAX_IMAGES) return setError(new Error(`Attach up to ${MAX_IMAGES} photos.`));
-
-    const ids = files.map((f) => `${f.name}-${f.size}-${f.lastModified}`);
-    setUploads(Object.fromEntries(ids.map((id) => [id, 0])));
+    setChecking(true);
     try {
-      const durations = await Promise.all(files.map((f) => (TYPES[f.type] === "video" ? videoDuration(f) : null)));
+      const items = await Promise.all(files.map(async (file) => ({ file, info: await inspect(file), preview: URL.createObjectURL(file) })));
+      setFraming(items.every((i) => suggestFraming(i.info) === "original") ? "original" : "fit");
+      setPending(items);
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error("That file couldn’t be read. Try another one."));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  function cancel() {
+    pending.forEach((p) => URL.revokeObjectURL(p.preview));
+    setPending([]);
+  }
+
+  async function confirm() {
+    setError(null);
+    try {
+      const prepared: PreparedFile[] = [];
+      for (const [i, item] of pending.entries()) {
+        const label = `Preparing ${pending.length > 1 ? `${i + 1} of ${pending.length}` : item.file.name}`;
+        setProgress({ label, value: 0 });
+        prepared.push(
+          item.info.kind === "video"
+            ? await prepareVideo(item.file, item.info, framing, (value) => setProgress({ label, value }))
+            : await prepareImage(item.file, framing),
+        );
+      }
+      const files = prepared.map((p) => p.file);
+      const total = files.reduce((n, f) => n + f.size, 0);
+      setProgress({ label: "Uploading", value: 0 });
       const uploaded = await uploadFiles("postMedia", {
         files,
         input: { workspaceId },
-        onUploadProgress: ({ file, loaded }) =>
-          setUploads((u) => ({ ...u, [`${file.name}-${file.size}-${file.lastModified}`]: Math.min(loaded / file.size, 1) })),
+        onUploadProgress: ({ totalLoaded }) => setProgress({ label: "Uploading", value: Math.min(totalLoaded / total, 1) }),
       });
       onChange([
         ...media,
@@ -69,25 +90,25 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
           kind: TYPES[files[i].type],
           contentType: files[i].type as MediaContentType,
           size: files[i].size,
-          durationSec: durations[i],
+          durationSec: prepared[i].durationSec,
           url: u.ufsUrl,
           preview: URL.createObjectURL(files[i]),
         })),
       ]);
+      cancel();
     } catch (e) {
       setError(e);
     } finally {
-      setUploads({});
+      setProgress(null);
     }
   }
 
-  const progress = Object.values(uploads);
   return (
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">Media</p>
-          <p className="text-xs text-muted-foreground">One video (MP4, MOV, WebM) or up to {MAX_IMAGES} photos (JPEG, WebP). TikTok needs one or the other.</p>
+          <p className="text-xs text-muted-foreground">One video (MP4, MOV, WebM) or up to {MAX_IMAGES} photos (JPEG, PNG, WebP), formatted for TikTok before upload.</p>
         </div>
         <input
           ref={input}
@@ -100,33 +121,33 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
           onChange={(e) => {
             const files = [...(e.target.files ?? [])];
             e.target.value = "";
-            if (files.length) void add(files);
+            if (files.length) void choose(files);
           }}
         />
         <button
           type="button"
-          disabled={disabled || busy || media.some((m) => m.kind === "video") || media.length >= MAX_IMAGES}
+          disabled={disabled || checking || pending.length > 0 || media.some((m) => m.kind === "video") || media.length >= MAX_IMAGES}
           onClick={() => input.current?.click()}
           className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-border px-3 text-sm font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9", focusRing)}
         >
-          <LuImagePlus className="h-4 w-4" aria-hidden /> Add media
+          <LuImagePlus className="h-4 w-4" aria-hidden /> {checking ? "Checking…" : "Add media"}
         </button>
       </div>
 
-      {(media.length > 0 || progress.length > 0) && (
+      {pending.length > 0 && <MediaPrepPanel items={pending} framing={framing} onFraming={setFraming} onConfirm={confirm} onCancel={cancel} progress={progress} />}
+
+      {media.length > 0 && (
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {media.map((m) => (
-            <li key={m.path} className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
+            <li key={m.path} className="relative aspect-[9/16] overflow-hidden rounded-md border border-border bg-black">
               {m.kind === "video" ? (
-                <video src={m.preview ?? m.url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
+                <video src={m.preview ?? m.url} className="h-full w-full object-contain" muted playsInline preload="metadata" />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- user uploads on a proxied origin
-                <img src={m.preview ?? m.url} alt="" className="h-full w-full object-cover" />
+                <img src={m.preview ?? m.url} alt="" className="h-full w-full object-contain" />
               )}
               {m.kind === "video" && m.durationSec != null && (
-                <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 text-[11px] font-semibold tabular-nums text-white">
-                  {Math.floor(m.durationSec / 60)}:{String(Math.round(m.durationSec % 60)).padStart(2, "0")}
-                </span>
+                <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 text-[11px] font-semibold tabular-nums text-white">{clock(m.durationSec)}</span>
               )}
               {!disabled && (
                 <button
@@ -138,14 +159,6 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
                   <LuX className="h-4 w-4" aria-hidden />
                 </button>
               )}
-            </li>
-          ))}
-          {progress.map((p, i) => (
-            <li key={`upload-${i}`} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-3">
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">{Math.round(p * 100)}%</span>
-              <span className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Uploading" aria-valuenow={Math.round(p * 100)} aria-valuemin={0} aria-valuemax={100}>
-                <span className="block h-full bg-primary transition-[width]" style={{ width: `${p * 100}%` }} />
-              </span>
             </li>
           ))}
         </ul>
