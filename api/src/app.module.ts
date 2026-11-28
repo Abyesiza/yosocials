@@ -19,6 +19,8 @@ import { FeedModule } from './modules/feed/feed.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { PostsModule } from './modules/posts/posts.module.js';
 import { PublishingModule } from './modules/publishing/publishing.module.js';
+import { SchedulingModule } from './modules/scheduling/scheduling.module.js';
+import { TrendsModule } from './modules/trends/trends.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module.js';
 
@@ -57,10 +59,12 @@ const AUDIENCE = 'yo-socials';
     IntegrationsModule,
     AccountsModule,
     PostsModule,
+    SchedulingModule,
     PublishingModule,
     AnalyticsModule,
     FeedModule,
     AgentModule,
+    TrendsModule,
   ],
   controllers: [HealthController],
 })

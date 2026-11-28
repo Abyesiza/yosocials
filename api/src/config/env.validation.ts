@@ -95,6 +95,14 @@ export class EnvironmentVariables {
   @IsString()
   GEMINI_FALLBACK_MODELS?: string = 'gemini-3.8-flash';
 
+  /**
+   * Let the AI search the web (Grounding with Google Search). Needs a paid
+   * Gemini key: Gemini 3 models get no grounding on the free tier.
+   */
+  @Transform(toBoolean)
+  @IsBoolean()
+  GEMINI_SEARCH_GROUNDING = false;
+
   /** TikTok app credentials from developers.tiktok.com. TikTok stays unavailable until all three are set. */
   @IsOptional()
   @IsString()

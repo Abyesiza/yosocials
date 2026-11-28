@@ -22,6 +22,7 @@ export class IntegrationsController {
       connect: p.capabilities.connect,
       available: p.oauth?.isConfigured() ?? true,
       media: p.capabilities.media ?? null,
+      posting: p.capabilities.posting,
     }));
   }
 }

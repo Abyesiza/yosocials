@@ -1,0 +1,53 @@
+/* FullCalendar's Breezy palette, mapped onto our tokens so light and dark mode follow `.dark`. */
+:root {
+  --fc-breezy-primary: hsl(var(--primary));
+  --fc-breezy-primary-over: hsl(var(--primary) / 0.9);
+  --fc-breezy-primary-foreground: hsl(var(--primary-foreground));
+  --fc-breezy-secondary: hsl(var(--card));
+  --fc-breezy-secondary-over: hsl(var(--muted));
+  --fc-breezy-secondary-border: hsl(var(--border));
+  --fc-breezy-secondary-foreground: hsl(var(--foreground));
+  --fc-breezy-secondary-icon: hsl(var(--muted-foreground));
+  --fc-breezy-secondary-icon-over: hsl(var(--foreground));
+  --fc-breezy-event: hsl(var(--primary));
+  --fc-breezy-event-contrast: hsl(var(--primary-foreground));
+  --fc-breezy-background-event: hsl(var(--primary));
+  --fc-breezy-highlight: hsl(var(--primary) / 0.08);
+  --fc-breezy-now: hsl(var(--destructive));
+  --fc-breezy-selected: hsl(var(--muted));
+  --fc-breezy-popover: hsl(var(--card));
+  --fc-breezy-popover-border: hsl(var(--border));
+  --fc-breezy-background: hsl(var(--card));
+  --fc-breezy-faint: hsl(var(--foreground) / 0.02);
+  --fc-breezy-muted: hsl(var(--foreground) / 0.05);
+  --fc-breezy-strong: hsl(var(--foreground) / 0.1);
+  --fc-breezy-stronger: hsl(var(--foreground) / 0.14);
+  --fc-breezy-strongest: hsl(var(--foreground) / 0.18);
+  --fc-breezy-foreground: hsl(var(--foreground));
+  /* Faint text (other-month dates) stays at muted so it keeps AA contrast. */
+  --fc-breezy-faint-foreground: hsl(var(--muted-foreground));
+  --fc-breezy-muted-foreground: hsl(var(--muted-foreground));
+  --fc-breezy-strong-foreground: hsl(var(--foreground));
+  --fc-breezy-border: hsl(var(--border));
+  --fc-breezy-muted-border: hsl(var(--border) / 0.6);
+  --fc-breezy-strong-border: hsl(var(--input));
+  --fc-breezy-ring-color: hsl(var(--ring));
+}
+
+/* Week and day posts: a neutral card with the platform's colour on the left edge. */
+.aby-cal-block {
+  background-color: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-inline-start: 3px solid var(--fc-event-color) !important;
+  border-radius: calc(var(--radius) - 4px) !important;
+}
+
+.aby-cal-block:hover {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.aby-cal-popover {
+  border-radius: var(--radius) !important;
+  box-shadow: 0 10px 30px -10px hsl(0 0% 0% / 0.25) !important;
+  overflow: hidden;
+}

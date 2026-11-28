@@ -8,6 +8,8 @@ import { IntegrationsRegistry } from '../integrations/integrations.registry.js';
 import { PostTarget } from '../posts/entities/post-target.entity.js';
 import { TargetStatus } from '../posts/enums/post-status.enum.js';
 import { EDITABLE_STATUSES, PostsService } from '../posts/posts.service.js';
+import { SchedulingService } from '../scheduling/scheduling.service.js';
+import { describeMoment } from '../scheduling/time-zone.js';
 
 const MAX_ATTEMPTS = 3;
 const BATCH_SIZE = 20;
@@ -38,6 +40,7 @@ export class PublishingService {
     private readonly accounts: AccountsService,
     private readonly posts: PostsService,
     private readonly registry: IntegrationsRegistry,
+    private readonly scheduling: SchedulingService,
   ) {}
 
   /** Called by the scheduler: publishes every target whose time has come. */
@@ -246,22 +249,56 @@ export class PublishingService {
     } catch (error) {
       await this.accounts.recordFailure(account, error);
       const message = error instanceof Error ? error.message : String(error);
-      const retryable = error instanceof PlatformApiError && error.retryable;
       this.logger.warn(`Publishing ${target.id} failed: ${message}`);
-      return this.fail(target, message, retryable);
+      if (!(error instanceof PlatformApiError)) {
+        return this.fail(target, message, false);
+      }
+      if (error.dailyLimitReached && target.attempts < MAX_ATTEMPTS) {
+        return this.postponeToNextDay(target, message);
+      }
+      return this.fail(target, message, error.retryable, error.retryAfterMs);
     }
   }
 
-  /** Retryable failures go back on the schedule with backoff (2, 4, 8 min). */
+  /**
+   * The platform's own daily cap was hit (TikTok): move the post to the
+   * account's best free time on the next day instead of failing it.
+   */
+  private async postponeToNextDay(
+    target: PostTarget,
+    message: string,
+  ): Promise<PublishOutcome> {
+    const slot = await this.scheduling.nextDaySlot(target.account, target.id);
+    if (!slot) return this.fail(target, message, false);
+    const { timeZone } = await this.scheduling.audience(
+      target.account.workspaceId,
+    );
+    const { displayName } = this.registry.get(target.account.platform);
+    const note = `${target.account.displayName || target.account.handle} reached ${displayName}’s daily posting limit, so we moved this post to ${describeMoment(slot.at, timeZone)}.`;
+    await this.targets.update(target.id, {
+      status: TargetStatus.Scheduled,
+      scheduledAt: slot.at,
+      scheduleReason: slot.reason,
+      lastError: note,
+    });
+    return { targetId: target.id, status: TargetStatus.Scheduled, error: note };
+  }
+
+  /**
+   * Retryable failures go back on the schedule with backoff (2, 4, 8 min),
+   * or later when the platform said how long to wait.
+   */
   private async fail(
     target: PostTarget,
     message: string,
     retryable: boolean,
+    retryAfterMs = 0,
   ): Promise<PublishOutcome> {
     if (retryable && target.attempts < MAX_ATTEMPTS) {
+      const backoffMs = 2 ** target.attempts * 60_000;
       await this.targets.update(target.id, {
         status: TargetStatus.Scheduled,
-        scheduledAt: new Date(Date.now() + 2 ** target.attempts * 60_000),
+        scheduledAt: new Date(Date.now() + Math.max(backoffMs, retryAfterMs)),
         lastError: message,
       });
       return {

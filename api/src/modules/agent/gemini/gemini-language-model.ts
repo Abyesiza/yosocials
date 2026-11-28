@@ -1,4 +1,10 @@
-import { ApiError, GoogleGenAI } from '@google/genai';
+import {
+  ApiError,
+  type GenerateContentResponse,
+  GoogleGenAI,
+  type GroundingMetadata,
+  type Tool,
+} from '@google/genai';
 import {
   BadGatewayException,
   GatewayTimeoutException,
@@ -9,17 +15,31 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { EnvironmentVariables } from '../../../config/env.validation.js';
 import type {
+  GroundedGenerationResult,
+  GroundingInfo,
   LanguageModel,
   StructuredGenerationRequest,
 } from '../interfaces/language-model.interface.js';
 
 /** Per model attempt. Planning a month of posts can take a while. */
 const ATTEMPT_TIMEOUT_MS = 45_000;
+/** Searching runs Google queries before the model starts answering. */
+const GROUNDED_ATTEMPT_TIMEOUT_MS = 90_000;
 
 /** Overloaded, rate limited or slow: worth trying the next model. */
 const TRANSIENT_STATUSES = new Set([429, 500, 503, 504]);
 
 class AttemptTimeout extends Error {}
+
+interface AttemptOptions {
+  timeoutMs: number;
+  tools?: Tool[];
+}
+
+interface Answer {
+  data: unknown;
+  response: GenerateContentResponse;
+}
 
 /**
  * Gemini through @google/genai. Tries GEMINI_MODEL, then each of
@@ -32,6 +52,7 @@ export class GeminiLanguageModel implements LanguageModel {
   private readonly logger = new Logger(GeminiLanguageModel.name);
   private readonly models: string[];
   private readonly client: GoogleGenAI | null;
+  private readonly searchEnabled: boolean;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     const primary = config.get('GEMINI_MODEL', { infer: true });
@@ -43,6 +64,8 @@ export class GeminiLanguageModel implements LanguageModel {
       .filter(Boolean);
     this.models = [...new Set([primary, ...fallbacks])];
 
+    this.searchEnabled =
+      config.get('GEMINI_SEARCH_GROUNDING', { infer: true }) === true;
     const apiKey = config.get('GEMINI_API_KEY', { infer: true });
     this.client = apiKey
       ? new GoogleGenAI({
@@ -57,7 +80,38 @@ export class GeminiLanguageModel implements LanguageModel {
     return this.models[0];
   }
 
+  /** Grounding with Google Search; needs a paid Gemini key, so it's off unless GEMINI_SEARCH_GROUNDING is on. */
+  get canSearchWeb(): boolean {
+    return this.searchEnabled && this.client !== null;
+  }
+
   async generateJson(request: StructuredGenerationRequest): Promise<unknown> {
+    return (await this.generate(request, { timeoutMs: ATTEMPT_TIMEOUT_MS }))
+      .data;
+  }
+
+  async generateGrounded(
+    request: StructuredGenerationRequest,
+  ): Promise<GroundedGenerationResult> {
+    if (!this.searchEnabled) {
+      throw new ServiceUnavailableException(
+        'Web search isn’t switched on for our AI. Ask whoever runs Aby Socials to turn it on.',
+      );
+    }
+    const { data, response } = await this.generate(request, {
+      timeoutMs: GROUNDED_ATTEMPT_TIMEOUT_MS,
+      tools: [{ googleSearch: {} }],
+    });
+    return {
+      data,
+      grounding: toGrounding(response.candidates?.[0]?.groundingMetadata),
+    };
+  }
+
+  private async generate(
+    request: StructuredGenerationRequest,
+    options: AttemptOptions,
+  ): Promise<Answer> {
     if (!this.client) {
       throw new ServiceUnavailableException(
         'AI features aren’t available yet. Ask whoever runs Aby Socials to finish setting them up.',
@@ -67,7 +121,7 @@ export class GeminiLanguageModel implements LanguageModel {
     let lastError: unknown;
     for (const model of this.models) {
       try {
-        return await this.attempt(this.client, model, request);
+        return await this.attempt(this.client, model, request, options);
       } catch (error) {
         lastError = error;
         if (!this.isTransient(error)) break;
@@ -97,10 +151,11 @@ export class GeminiLanguageModel implements LanguageModel {
     client: GoogleGenAI,
     model: string,
     request: StructuredGenerationRequest,
-  ): Promise<unknown> {
-    let text: string | undefined;
+    options: AttemptOptions,
+  ): Promise<Answer> {
+    let response: GenerateContentResponse;
     try {
-      const response = await client.models.generateContent({
+      response = await client.models.generateContent({
         model,
         contents: request.prompt,
         config: {
@@ -108,23 +163,24 @@ export class GeminiLanguageModel implements LanguageModel {
           responseMimeType: 'application/json',
           responseJsonSchema: request.jsonSchema,
           temperature: request.temperature ?? 0.7,
-          abortSignal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+          ...(options.tools && { tools: options.tools }),
+          abortSignal: AbortSignal.timeout(options.timeoutMs),
         },
       });
-      text = response.text;
     } catch (error) {
       if (error instanceof Error && /abort|timeout/i.test(error.name)) {
         throw new AttemptTimeout(
-          `no answer within ${ATTEMPT_TIMEOUT_MS / 1000}s`,
+          `no answer within ${options.timeoutMs / 1000}s`,
         );
       }
       throw error;
     }
 
+    const text = response.text;
     if (!text)
       throw new BadGatewayException('Our AI didn’t send an answer. Try again.');
     try {
-      return JSON.parse(text) as unknown;
+      return { data: JSON.parse(text) as unknown, response };
     } catch {
       throw new BadGatewayException(
         'Our AI gave an answer we couldn’t use. Try again.',
@@ -145,4 +201,23 @@ export class GeminiLanguageModel implements LanguageModel {
     if (error instanceof ApiError) return `HTTP ${error.status}`;
     return error instanceof Error ? error.message.slice(0, 200) : String(error);
   }
+}
+
+/** Google's Search Suggestions and sources, kept as returned so they can be shown unmodified. */
+function toGrounding(
+  metadata: GroundingMetadata | undefined,
+): GroundingInfo | null {
+  if (!metadata) return null;
+  const sources = (metadata.groundingChunks ?? []).flatMap((chunk) =>
+    chunk.web?.uri
+      ? [{ title: chunk.web.title ?? chunk.web.uri, uri: chunk.web.uri }]
+      : [],
+  );
+  const searchEntryPointHtml =
+    metadata.searchEntryPoint?.renderedContent ?? null;
+  const queries = metadata.webSearchQueries ?? [];
+  if (!searchEntryPointHtml && sources.length === 0 && queries.length === 0) {
+    return null;
+  }
+  return { searchEntryPointHtml, sources, queries };
 }

@@ -68,6 +68,9 @@ const FAIL_REASONS: Record<string, string> = {
   spam_risk: 'TikTok flagged the post as possible spam.',
 };
 
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+
 @Injectable()
 export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
   readonly platform = Platform.TikTok;
@@ -79,6 +82,23 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
     supportsMetrics: true,
     contentStyle:
       'Caption for a short vertical video or photo carousel. Hook in the first line, a short call to action, then 3 to 5 relevant #hashtags. The video or photos carry the post; the caption supports them.',
+    // Buffer 2026 (7.1M posts) and Later 2026: evenings and weekend mornings; Sprout 2026: weekday afternoons.
+    posting: {
+      maxPerDay: 3,
+      minSpacingMinutes: 180,
+      windows: [
+        { days: ALL, start: '18:00', end: '22:00', weight: 3 },
+        { days: [0, 6], start: '09:00', end: '13:00', weight: 2 },
+        { days: WEEKDAYS, start: '13:00', end: '17:00', weight: 1 },
+      ],
+      avoid: [{ days: ALL, start: '00:00', end: '07:00', weight: 1 }],
+      source:
+        'Buffer 2026, Later 2026, Sprout Social 2026 and Hootsuite 2025 studies of TikTok posts',
+      limits: [
+        'About 15 Direct Posts a day per creator, shared with every app they use (TikTok)',
+        '6 publish requests per minute per creator (TikTok API)',
+      ],
+    },
     connect: 'oauth',
     // developers.tiktok.com/doc/content-posting-api-media-transfer-guide (checked 2026-11-28).
     media: {

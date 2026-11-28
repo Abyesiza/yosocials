@@ -28,6 +28,10 @@ export interface Workspace {
   id: string;
   name: string;
   role: WorkspaceRole;
+  /** IANA zone the audience lives in; the calendar and suggested times use it. null: not set. */
+  audienceTimeZone: string | null;
+  /** ISO 3166-1 alpha-2 country of most of the audience; trends use it. null: not set. */
+  audienceCountry: string | null;
   createdAt: string;
 }
 
@@ -56,6 +60,25 @@ export interface PlatformInfo {
   available: boolean;
   /** null: text only; attached media isn't sent. */
   media: MediaCapabilities | null;
+  posting: PostingPolicy;
+}
+
+/** A stretch of the week in the audience's local time: days 0 (Sunday) to 6, "HH:MM", end exclusive. */
+export interface PostingWindow {
+  days: number[];
+  start: string;
+  end: string;
+  weight: number;
+}
+
+/** Mirrors the API's `PostingPolicy`: research-backed posting windows and safe limits per platform. */
+export interface PostingPolicy {
+  maxPerDay: number;
+  minSpacingMinutes: number;
+  windows: PostingWindow[];
+  avoid: PostingWindow[];
+  source: string;
+  limits: string[];
 }
 
 /** Width ÷ height. `preferred`: the shape the platform shows best (we frame to it); `min`/`max`: hard limits. */
@@ -190,6 +213,8 @@ export interface PostTarget {
   status: TargetStatus;
   options: Record<string, unknown> | null;
   scheduledAt: string | null;
+  /** Why Aby Socials picked this time; null once a person sets the time. */
+  scheduleReason: string | null;
   publishedAt: string | null;
   externalUrl: string | null;
   lastError: string | null;
@@ -267,10 +292,67 @@ export interface MetricPoint {
   views: number | null;
 }
 
+export type TrendSource = "google_trends" | "mastodon" | "bluesky";
+
+export interface TrendNews {
+  title: string;
+  url: string;
+  source: string;
+}
+
+export interface TrendItem {
+  source: TrendSource;
+  /** country: Google Trends for the country. global: platform-wide (Mastodon, Bluesky). */
+  scope: "country" | "global";
+  term: string;
+  /** Google: approximate searches ("2,000+"). Mastodon: posts in the latest day. Bluesky: null. */
+  traffic: string | null;
+  url: string | null;
+  news: TrendNews[];
+  observedAt: string;
+}
+
+export interface TrendSnapshot {
+  country: string;
+  updatedAt: string;
+  items: TrendItem[];
+  notes: string[];
+}
+
+/** Google Search grounding. Google's terms: show it unmodified, to this person only, never stored. */
+export interface GroundingInfo {
+  searchEntryPointHtml: string | null;
+  sources: { title: string; uri: string }[];
+  queries: string[];
+}
+
 export interface PlanResult {
   model: string;
+  /** The audience time zone the times were picked in. */
+  timeZone: string;
   posts: Post[];
   skipped: string[];
+  trends: TrendSnapshot | null;
+  grounding: GroundingInfo | null;
+}
+
+export interface AgentCapabilities {
+  model: string;
+  /** True when planning can search the web first. */
+  searchWeb: boolean;
+}
+
+export interface ScheduleSuggestion {
+  accountId: string;
+  platform: Platform;
+  /** UTC ISO time. */
+  at: string;
+  reason: string;
+}
+
+export interface ScheduleSuggestions {
+  timeZone: string;
+  suggestions: ScheduleSuggestion[];
 }
 
 export interface VariantsResult {

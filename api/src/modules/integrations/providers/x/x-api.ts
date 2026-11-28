@@ -218,11 +218,19 @@ export class XApi {
     if (!(error instanceof PlatformApiError) || error.status === 0)
       return error;
     const body = (error.body ?? {}) as XErrorBody;
-    return this.toError(body.errors?.[0] ?? body, error.status);
+    return this.toError(
+      body.errors?.[0] ?? body,
+      error.status,
+      error.retryAfterMs,
+    );
   }
 
   /** What X's errors mean for the person posting. */
-  private toError(problem: XProblem, status: number): PlatformApiError {
+  private toError(
+    problem: XProblem,
+    status: number,
+    retryAfterMs?: number,
+  ): PlatformApiError {
     const detail = problem.detail ?? problem.message ?? problem.title ?? '';
     const type = problem.type ?? '';
     if (status === 401)
@@ -241,6 +249,7 @@ export class XApi {
         429,
         true,
         problem,
+        { retryAfterMs },
       );
     }
     // X answers 403, but the account is fine: 409 keeps it from being flagged for reconnecting.

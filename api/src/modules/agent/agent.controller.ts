@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CurrentWorkspace,
@@ -8,6 +15,7 @@ import {
 import { WorkspaceRole } from '../workspaces/enums/workspace-role.enum.js';
 import type { WorkspaceContext } from '../workspaces/interfaces/workspace-context.interface.js';
 import { AgentService } from './agent.service.js';
+import { AgentCapabilitiesDto } from './dto/agent-capabilities.dto.js';
 import {
   DraftVariantsDto,
   DraftVariantsResponseDto,
@@ -23,6 +31,13 @@ import {
 @Controller('workspaces/:workspaceId/agent')
 export class AgentController {
   constructor(private readonly agent: AgentService) {}
+
+  @Get('capabilities')
+  @ApiOperation({ summary: 'What the AI can do here, e.g. search the web' })
+  @ApiOkResponse({ type: AgentCapabilitiesDto })
+  capabilities(): AgentCapabilitiesDto {
+    return this.agent.capabilities();
+  }
 
   @Post('plan')
   @HttpCode(HttpStatus.OK)

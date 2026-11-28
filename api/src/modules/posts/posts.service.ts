@@ -13,6 +13,7 @@ import { AccountsService } from '../accounts/accounts.service.js';
 import type { SocialAccount } from '../accounts/entities/social-account.entity.js';
 import type { PublishInput } from '../integrations/interfaces/platform-provider.interface.js';
 import { IntegrationsRegistry } from '../integrations/integrations.registry.js';
+import { SchedulingService } from '../scheduling/scheduling.service.js';
 import { textLength } from '../../common/text/text-length.js';
 import type { CreatePostDto } from './dto/create-post.dto.js';
 import type { ListPostsQueryDto } from './dto/list-posts-query.dto.js';
@@ -47,6 +48,8 @@ export interface CreatePostOptions {
   asDraft?: boolean;
   /** The user creating it, recorded as the post's author. */
   createdById?: string | null;
+  /** Why the engine chose each account's time (agent plans), by account id. */
+  scheduleReasons?: Map<string, string>;
 }
 
 /** Every method is scoped to one workspace; posts of others are "not found". */
@@ -59,6 +62,7 @@ export class PostsService {
     private readonly accounts: AccountsService,
     private readonly registry: IntegrationsRegistry,
     private readonly storage: MediaStorageService,
+    private readonly scheduling: SchedulingService,
   ) {}
 
   async create(
@@ -91,6 +95,7 @@ export class PostsService {
           text: t.text ?? null,
           options: await this.parseOptions(account, t.options),
           scheduledAt,
+          scheduleReason: options.scheduleReasons?.get(t.accountId) ?? null,
           status:
             scheduledAt && !options.asDraft
               ? TargetStatus.Scheduled
@@ -109,10 +114,11 @@ export class PostsService {
     });
 
     this.assertTextFits(post, post.targets);
-    this.assertReady(
-      post,
-      post.targets.filter((t) => t.status === TargetStatus.Scheduled),
+    const scheduled = post.targets.filter(
+      (t) => t.status === TargetStatus.Scheduled,
     );
+    this.assertReady(post, scheduled);
+    await this.assertSpacing(workspaceId, scheduled);
     const saved = await this.posts.save(post);
     return this.findOne(workspaceId, saved.id);
   }
@@ -212,8 +218,13 @@ export class PostsService {
         dto.options ?? undefined,
       );
     }
-    if (dto.scheduledAt !== undefined) {
-      target.scheduledAt = dto.scheduledAt;
+    const moved =
+      dto.scheduledAt !== undefined &&
+      dto.scheduledAt?.getTime() !== target.scheduledAt?.getTime();
+    if (moved) {
+      target.scheduledAt = dto.scheduledAt ?? null;
+      // A person chose this time, so the engine's reason no longer applies.
+      target.scheduleReason = null;
       if (
         dto.scheduledAt === null &&
         target.status === TargetStatus.Scheduled
@@ -224,6 +235,7 @@ export class PostsService {
     this.assertTextFits(post, [target]);
     if (target.status === TargetStatus.Scheduled) {
       this.assertReady(post, [target]);
+      if (moved) await this.assertSpacing(workspaceId, [target]);
     }
     await this.targets.save(target);
     return this.findOne(workspaceId, postId);
@@ -262,6 +274,7 @@ export class PostsService {
     }
     this.assertTextFits(post, chosen);
     this.assertReady(post, chosen);
+    await this.assertSpacing(workspaceId, chosen);
 
     for (const target of chosen) {
       target.status = TargetStatus.Scheduled;
@@ -335,6 +348,21 @@ export class PostsService {
       );
     });
     if (problems.length > 0) throw new BadRequestException(problems);
+  }
+
+  /** Keeps each account within its platform's daily cap and spacing. */
+  private assertSpacing(
+    workspaceId: string,
+    targets: PostTarget[],
+  ): Promise<void> {
+    return this.scheduling.assertCanSchedule(
+      workspaceId,
+      targets.map((t) => ({
+        id: t.id,
+        account: t.account,
+        scheduledAt: t.scheduledAt!,
+      })),
+    );
   }
 
   /** Rejects text that's longer than a platform allows. */

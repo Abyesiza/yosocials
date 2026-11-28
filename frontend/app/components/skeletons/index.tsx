@@ -71,14 +71,30 @@ export function StatTilesSkeleton({ count = 5 }: { count?: number }) {
 
 export function CalendarSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-7" role="status" aria-label="Loading calendar">
-      {range(7).map((i) => (
-        <Card key={i} className="min-h-40 space-y-2 p-3">
-          <Bone className="h-4 w-14" />
-          <Bone className="h-14 w-full" />
-          {i % 2 === 0 && <Bone className="h-14 w-full" />}
-        </Card>
-      ))}
+    <div role="status" aria-label="Loading calendar">
+      <div className="mb-4 flex flex-wrap gap-2">
+        {range(4).map((i) => (
+          <Bone key={i} className="h-9 w-24 rounded-full" />
+        ))}
+      </div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex gap-2">
+          {range(3).map((i) => (
+            <Bone key={i} className="h-9 w-16 rounded-full" />
+          ))}
+          <Bone className="h-9 w-40" />
+        </div>
+        <Bone className="hidden h-10 w-64 rounded-full md:block" />
+      </div>
+      <Card className="grid grid-cols-7 gap-px overflow-hidden p-2 sm:p-4">
+        {range(35).map((i) => (
+          <div key={i} className="min-h-24 space-y-1.5 p-1.5">
+            <Bone className="h-3 w-5" />
+            {i % 3 === 0 && <Bone className="h-4 w-full" />}
+            {i % 5 === 0 && <Bone className="h-4 w-4/5" />}
+          </div>
+        ))}
+      </Card>
     </div>
   );
 }

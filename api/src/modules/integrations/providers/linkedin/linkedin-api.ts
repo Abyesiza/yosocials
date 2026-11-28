@@ -251,6 +251,7 @@ export class LinkedInApi {
         429,
         true,
         body,
+        { retryAfterMs: error.retryAfterMs },
       );
     }
     // LinkedIn answers 422 for a repeat of a recent post; not an access problem.

@@ -17,6 +17,40 @@ export interface ProviderCapabilities {
   connect: 'credentials' | 'oauth';
   /** Media the platform takes. Absent: text only, and attached media is not sent. */
   media?: MediaCapabilities;
+  /** When and how often to post here: suggested times and the scheduling guard use it. */
+  posting: PostingPolicy;
+}
+
+/**
+ * A stretch of the week in the AUDIENCE's local time. `days` are 0 (Sunday)
+ * to 6 (Saturday); `start`/`end` are "HH:MM", end exclusive, same day.
+ */
+export interface PostingWindow {
+  days: number[];
+  start: string;
+  end: string;
+  /** Higher is better (1 to 3). */
+  weight: number;
+}
+
+/**
+ * Research-backed defaults for one platform. Studies (Buffer, Sprout,
+ * Hootsuite, Later 2025–2026) report audience-local times and aren't African,
+ * so these are starting points, re-ranked by each account's own results.
+ */
+export interface PostingPolicy {
+  /** Most posts a day per account we schedule, well inside the platform's limits. */
+  maxPerDay: number;
+  /** Least time between two posts from one account. */
+  minSpacingMinutes: number;
+  /** Best times first by weight. */
+  windows: PostingWindow[];
+  /** Times to stay away from. */
+  avoid: PostingWindow[];
+  /** Where the windows come from, shown with suggested times. */
+  source: string;
+  /** The platform's documented limits this policy stays inside, for people and logs. */
+  limits: string[];
 }
 
 export interface MediaCapabilities {

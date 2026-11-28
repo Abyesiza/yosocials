@@ -42,6 +42,8 @@ Everything else lives under `/api/workspaces/:workspaceId/...`: accounts, posts,
 | admin | + connect and remove accounts; add, change and remove members; rename the workspace |
 | owner | + delete the workspace; manage other owners. A workspace always keeps at least one owner. |
 
+`PATCH /api/workspaces/:id` (admin) takes any of `{ name, audienceCountry, audienceTimeZone }`: the audience's country (ISO 3166-1 alpha-2, e.g. `UG`; `null` clears it) and IANA time zone (default `UTC`). Suggested times, the scheduling guard's wording and the AI planner all use them.
+
 Members are added by email, and the person needs an account first. Sign-in and sign-up are rate limited per IP (`AUTH_RATE_LIMIT_PER_MINUTE`).
 
 ## AI model
@@ -51,6 +53,28 @@ Members are added by email, and the person needs an account first. Sign-in and s
 ```bash
 curl -s -H "x-goog-api-key: $GEMINI_API_KEY" https://generativelanguage.googleapis.com/v1beta/models | grep '"name"'
 ```
+
+### Web search
+
+`GEMINI_SEARCH_GROUNDING` (default `false`) lets the model search the web first ([Grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search)), through `LanguageModel.generateGrounded`. `canSearchWeb` is true only when it's on and `GEMINI_API_KEY` is set. Leave it off on a free-tier key: Gemini 3 models get no grounding there. The paid tier includes 5,000 search queries a month, then about $14 per 1,000, capped by default at 1,500 search requests a day per project.
+
+Grounded calls send `tools: [{ googleSearch: {} }]` with the usual JSON schema, use the same model fallback, and get 90s per attempt instead of 45s because searching comes first. They return `{ data, grounding }`, where `grounding` holds Google's rendered Search Suggestions (`searchEntryPointHtml`), the `sources` and the `queries`, or is null when the model didn't search. Google's terms require showing the Search Suggestions and sources, unmodified, to the person who asked, and never caching them for anyone else.
+
+## Trends
+
+`GET /api/workspaces/:workspaceId/trends?country=UG` (any member) returns what's trending for an audience country, as a `TrendSnapshot`: `{ country, updatedAt, items[], notes[] }`. Each item has `source`, `scope` (`country` or `global`), `term`, `traffic`, `url`, related `news` headlines and `observedAt`. `country` is required and must be an ISO 3166-1 alpha-2 code.
+
+| Source | Scope | Notes |
+| --- | --- | --- |
+| Google Trends “Trending now” RSS (`trends.google.com/trending/rss?geo=XX`) | country | Unofficial and undocumented, so it may change or vanish. About 10 items with approximate searches and news headlines. Some countries have no list (Rwanda answers 400). |
+| Mastodon trending tags (`mastodon.social/api/v1/trends/tags`) | global | Public, no key. `traffic` is the tag's uses on the latest day. mastodon.social only, not the whole fediverse. |
+| Bluesky trending topics (`app.bsky.unspecced.getTrendingTopics` on `public.api.bsky.app`) | global | Public, no key. “Unspecced” means Bluesky may change it at any time. No traffic. |
+
+- **Failures:** each source has a 5s timeout and fails on its own. A failure is logged as a warning and becomes a plain note in `notes`; the request never fails because of it.
+- **Caching:** in memory, per instance, for 3 hours (a failed source is retried after 10 minutes). Google Trends is cached per country, Mastodon and Bluesky once for every country. Concurrent requests share one fetch. Trends are public data, so one cache serves every workspace.
+- **Feed content is untrusted:** XML entities and CDATA are decoded, markup and control characters stripped, and only http(s) links kept, so everything is plain text.
+- **For prompts:** `TrendsService.digest(snapshot)` makes a compact list (up to 15 items, taking sources in turn) that tells the model to use a trend only when it fits the brief and never to invent facts about it. `TREND_GUIDANCE` (`modules/trends/trend-guidance.ts`) has per-platform advice.
+- **Not possible, or skipped on purpose:** TikTok has no legitimate API for trending sounds, and business accounts may only use the Commercial Music Library, so the AI suggests formats, hooks and hashtags and the person picks a sound in the TikTok app (Creative Center shows what's trending). X trends are skipped because X charges for them.
 
 ## Layout
 
@@ -69,7 +93,9 @@ src/
     publishing/      publish now + cron scheduler, retries, double-post protection
     analytics/       metric snapshots over time, overview, top posts
     feed/            unified feed across accounts + content calendar
+    scheduling/      slot finder: suggested times, the scheduling guard, planner times
     agent/           Gemini planning: calendar → draft posts, per-platform variants
+    trends/          what's trending per country (Google Trends, Mastodon, Bluesky)
 ```
 
 Each module keeps `entities/`, `dto/`, `enums/` or `interfaces/` apart from its `*.service.ts` and `*.controller.ts`.
@@ -79,10 +105,32 @@ Each module keeps `entities/`, `dto/`, `enums/` or `interfaces/` apart from its 
 - **User**, **Workspace**, **WorkspaceMember** (with role): who can see and do what. Accounts and posts belong to a workspace, and deleting the workspace deletes them.
 - **SocialAccount**: one connected account or channel. Holds the persona, brand voice and encrypted credentials.
 - **Post**: one piece of content (`title`, `body`, `media`: one video or up to 35 images, stored on UploadThing).
-- **PostTarget**: that post on one account. It has its own text, platform `options` (TikTok privacy and interactions), `scheduledAt`, status, publish result and latest metrics. The feed and the calendar both read from this table.
+- **PostTarget**: that post on one account. It has its own text, platform `options` (TikTok privacy and interactions), `scheduledAt` (with `scheduleReason` when Aby Socials picked the time; cleared when a person changes it), status, publish result and latest metrics. The feed and the calendar both read from this table.
 - **PostMetricSnapshot**: engagement for a target at one point in time, so you can see how a post moved after publishing.
 
 Target lifecycle: `draft → scheduled → publishing → published | failed`. Platforms that finish publishing on their own time (TikTok) go `publishing → processing → published | failed`; the scheduler, or `POST /posts/:id/sync` from the post page, checks on them. Agent output always lands as `draft`. Nothing publishes until someone calls `POST /posts/:id/schedule` or `POST /posts/:id/publish`.
+
+## Scheduling
+
+Each provider declares `capabilities.posting` (`PostingPolicy`, published by `GET /integrations`): `maxPerDay`, `minSpacingMinutes`, weighted `windows` and `avoid` times in the audience's local time, the `source` of the windows and the platform's own `limits`. The windows are starting points, not rules: the studies behind them (Buffer, Sprout Social, Hootsuite, Later, 2025–2026) report audience-local times and aren't African, so each account's own results should re-rank them over time.
+
+| Platform | Per day | Apart | Windows from |
+| --- | --- | --- | --- |
+| X | 3 | 2 hours | Buffer 2026 (8.7M posts), Hootsuite 2025, Sprout Social 2026: weekday mornings |
+| LinkedIn | 1 | 18 hours | Sprout Social 2026, Buffer 2026 (4.8M posts), Later 2026: weekday late morning to late afternoon |
+| TikTok | 3 | 3 hours | Buffer 2026 (7.1M posts), Later 2026, Sprout Social 2026, Hootsuite 2025: evenings, weekend mornings |
+| Bluesky | 3 | 2 hours | Buffer 2026 (3M+ posts), SocialPilot: evenings and weekends |
+| Mastodon | 3 | 90 minutes | no published study; feeds are chronological, so waking hours |
+| Telegram | 3 | 2 hours | no published study; every post notifies subscribers, so daytime and evening |
+| Discord | 1 | 24 hours | no published study; Discord advises few announcements, so member evenings |
+
+The comment above each provider's `posting` says where its numbers come from.
+
+- **Slot finder** (`modules/scheduling/slot-finder.ts`): scores every quarter hour in the window by the platform's `windows` weight in the audience time zone (`Intl`, so DST zones like Europe/London are right), skips `avoid` times and anything under 10 minutes away, and nudges each time by 1–3 minutes (a stable hash of account and time) so posts don't all fire on the hour. It keeps `maxPerDay` per audience-local day and `minSpacingMinutes` against the account's scheduled, publishing, processing and published posts (`publishedAt`, else `scheduledAt`) and the times it has already handed out. Asked for several, it takes the strongest day first, one per day, and only comes back for a second time on a day once every day has one. Each time comes with a reason: “Tuesday 09:02 (EAT) is one of X’s strongest times. Source: Buffer 2026, Hootsuite 2025 and Sprout Social 2026 studies of X posts.” Zone names come from ICU, except African zones, which ICU calls “GMT+3”, so EAT, CAT, SAST and WAT are named in `time-zone.ts`.
+- **Suggestions:** `POST /workspaces/:id/schedule/suggestions` (editor) `{ accountIds (1–20), from?, days? (1–31, default 7), count? (1–10 per account, default 3), timeZone? (default the workspace's) }` returns `{ timeZone, suggestions: [{ accountId, platform, at, reason }] }`, per account in the order asked, earliest first. Fewer come back when the caps leave no room.
+- **Guard:** a target becoming `scheduled` or moving while scheduled (creating a post with a time, `POST /posts/:id/schedule`, which also approves AI plans, and `PATCH /posts/:id/targets/:targetId`) is refused when it would break the account's daily cap or spacing. The message names the rule and offers the next free time within 14 days, in the workspace's time zone: “LinkedIn posts from Aby Creator are kept at least 18 hours apart, and another is scheduled at Tue 2 Dec, 10:00 EAT. The next free time is Wed 3 Dec, 11:02 EAT.” Drafts aren't checked, and neither is publishing now: a person chose to post now, and the caps are well inside each platform's own limits, which the platform still enforces.
+- **AI planner:** the model picks a `date` per target, never a time. The engine gives each target its account's best free time on or after that date, earliest dates first and within the caps (existing posts included), and stores the reason. A target with no free time left in the plan is skipped with a plain reason. The plan's time zone and country default to the workspace's (`timezone` and `country` override them), and the prompt tells the model each platform's daily cap.
+- **Slow-down signals:** on a 429, `PlatformApiError.retryAfterMs` carries the platform's wait (`Retry-After`, Discord's `retry_after`, Telegram's `parameters.retry_after`, X's `x-rate-limit-reset`, Mastodon's `X-RateLimit-Reset`). A retryable failure goes back on the schedule after the longer of our backoff (2, 4, 8 minutes) and that wait, up to 3 attempts. TikTok's `spam_risk_too_many_posts` (the creator's daily cap) moves the post to the account's best free time the next day, with a note in `lastError`, instead of failing it; it counts as an attempt.
 
 ## Platforms
 

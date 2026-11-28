@@ -11,12 +11,19 @@ import { IntegrationsRegistry } from '../integrations/integrations.registry.js';
 import { PostResponseDto } from '../posts/dto/post-response.dto.js';
 import { PostSource } from '../posts/enums/post-status.enum.js';
 import { PostsService } from '../posts/posts.service.js';
+import { SchedulingService } from '../scheduling/scheduling.service.js';
+import { TrendsService } from '../trends/trends.service.js';
+import type { TrendSnapshot } from '../trends/trends.types.js';
+import type { Slot } from '../scheduling/slot-finder.js';
+import { describeDay, localTime } from '../scheduling/time-zone.js';
 import type {
   DraftVariantsDto,
   DraftVariantsResponseDto,
 } from './dto/draft-variants.dto.js';
 import {
   ModelCalendarOutput,
+  type ModelPostOutput,
+  type ModelTargetOutput,
   ModelVariantsOutput,
 } from './dto/model-output.dto.js';
 import type {
@@ -24,6 +31,7 @@ import type {
   PlanCalendarResponseDto,
 } from './dto/plan-calendar.dto.js';
 import {
+  type GroundingInfo,
   LANGUAGE_MODEL,
   type LanguageModel,
 } from './interfaces/language-model.interface.js';
@@ -52,7 +60,13 @@ export class AgentService {
     private readonly accounts: AccountsService,
     private readonly posts: PostsService,
     private readonly registry: IntegrationsRegistry,
+    private readonly scheduling: SchedulingService,
+    private readonly trends: TrendsService,
   ) {}
+
+  capabilities(): { model: string; searchWeb: boolean } {
+    return { model: this.model.modelName, searchWeb: this.model.canSearchWeb };
+  }
 
   async planCalendar(
     workspaceId: string,
@@ -60,71 +74,152 @@ export class AgentService {
   ): Promise<PlanCalendarResponseDto> {
     const contexts = await this.loadContexts(workspaceId, dto.accountIds);
     const byId = new Map(contexts.map((c) => [c.account.id, c]));
+    const audience = await this.scheduling.audience(workspaceId);
+    const timeZone = dto.timezone ?? audience.timeZone;
     // Never plan into the past: a window starting "today" begins at midnight,
     // and an approved past time would publish the moment it's scheduled.
     const start = new Date(
       Math.max(dto.startDate.getTime(), Date.now() + MIN_LEAD_MS),
     );
     const end = new Date(dto.startDate.getTime() + dto.days * 86_400_000);
+    const firstDay = localTime(start, timeZone).day;
+    const lastDay = localTime(new Date(end.getTime() - 1), timeZone).day;
 
-    const output = await this.ask(ModelCalendarOutput, {
-      prompt: calendarPrompt({
-        brief: dto.brief,
-        accounts: contexts,
-        start,
-        end,
-        timezone: dto.timezone,
-        postsPerWeekPerAccount: dto.postsPerWeekPerAccount,
-      }),
-      jsonSchema: CALENDAR_SCHEMA,
-    });
+    const country = dto.country ?? audience.country;
+    // Shared, cached public trend lists; never Gemini's grounded output (Google's terms).
+    const trends: TrendSnapshot | null =
+      dto.useTrends && country ? await this.trends.forCountry(country) : null;
+
+    const { output, grounding } = await this.askGrounded(
+      ModelCalendarOutput,
+      {
+        prompt: calendarPrompt({
+          brief: dto.brief,
+          accounts: contexts,
+          firstDay,
+          lastDay,
+          timeZone,
+          country,
+          postsPerWeekPerAccount: dto.postsPerWeekPerAccount,
+          ...(trends?.items.length && { trends: this.trends.digest(trends) }),
+        }),
+        jsonSchema: CALENDAR_SCHEMA,
+      },
+      dto.searchWeb,
+    );
 
     const skipped: string[] = [];
-    const created: PostResponseDto[] = [];
+    const skip = (
+      title: string,
+      ctx: AccountContext | undefined,
+      why: string,
+    ) =>
+      skipped.push(
+        `“${title}” for ${ctx?.platformName ?? 'an account'}: ${why}`,
+      );
 
-    for (const planned of output.posts) {
+    const planned = output.posts.map((post) => {
       const seen = new Set<string>();
-      const targets = planned.targets.filter((t) => {
+      const targets = post.targets.filter((t) => {
         const ctx = byId.get(t.accountId);
-        const when = new Date(t.scheduledAt);
         const reason = !ctx
           ? 'the AI picked an account that isn’t in this plan'
           : seen.has(t.accountId)
             ? 'the AI suggested this account twice'
-            : when < start || when > end
-              ? 'the suggested time is outside the dates you chose'
+            : t.date < firstDay || t.date > lastDay
+              ? 'the suggested date is outside the dates you chose'
               : this.posts.textLengthIssue(t.text, ctx.account);
         if (reason) {
-          skipped.push(
-            `“${planned.title}” for ${ctx?.platformName ?? 'an account'}: ${reason}`,
-          );
+          skip(post.title, ctx, reason);
           return false;
         }
         seen.add(t.accountId);
         return true;
       });
-      if (targets.length === 0) continue;
+      return { post, targets };
+    });
+    const slots = await this.assignTimes(
+      planned,
+      contexts,
+      { timeZone, start, end },
+      skip,
+    );
 
-      const post = await this.posts.create(
+    const created: PostResponseDto[] = [];
+    for (const { post, targets } of planned) {
+      const timed = targets.filter((t) => slots.has(t));
+      if (timed.length === 0) continue;
+      const saved = await this.posts.create(
         workspaceId,
         {
-          title: planned.title,
-          body: planned.idea,
-          targets: targets.map((t) => ({
+          title: post.title,
+          body: post.idea,
+          targets: timed.map((t) => ({
             accountId: t.accountId,
             text: t.text,
-            scheduledAt: new Date(t.scheduledAt),
+            scheduledAt: slots.get(t)!.at,
           })),
         },
-        { source: PostSource.Agent, asDraft: true },
+        {
+          source: PostSource.Agent,
+          asDraft: true,
+          scheduleReasons: new Map(
+            timed.map((t) => [t.accountId, slots.get(t)!.reason]),
+          ),
+        },
       );
-      created.push(this.posts.respond(post));
+      created.push(this.posts.respond(saved));
     }
 
     this.logger.log(
       `Planned ${created.length} post(s), skipped ${skipped.length} suggestion(s)`,
     );
-    return { model: this.model.modelName, posts: created, skipped };
+    return {
+      model: this.model.modelName,
+      timeZone,
+      posts: created,
+      skipped,
+      trends,
+      grounding,
+    };
+  }
+
+  /**
+   * Gives each target the account's best free time on or after the model's
+   * date, earliest dates first, within caps and spacing (existing posts too).
+   */
+  private async assignTimes(
+    planned: { post: ModelPostOutput; targets: ModelTargetOutput[] }[],
+    contexts: AccountContext[],
+    window: { timeZone: string; start: Date; end: Date },
+    skip: (title: string, ctx: AccountContext, why: string) => void,
+  ): Promise<Map<ModelTargetOutput, Slot>> {
+    const { timeZone, start, end } = window;
+    const byId = new Map(contexts.map((c) => [c.account.id, c]));
+    const finders = await this.scheduling.finders(
+      contexts.map((c) => c.account),
+      timeZone,
+      start,
+      end,
+    );
+    const slots = new Map<ModelTargetOutput, Slot>();
+    const queue = planned
+      .flatMap(({ post, targets }) => targets.map((t) => ({ post, t })))
+      .sort((a, b) => a.t.date.localeCompare(b.t.date));
+    for (const { post, t } of queue) {
+      const slot = finders.get(t.accountId)!.next(start, end, t.date);
+      if (slot) {
+        slots.set(t, slot);
+        continue;
+      }
+      const ctx = byId.get(t.accountId)!;
+      skip(
+        post.title,
+        ctx,
+        `there’s no free time from ${describeDay(t.date)} to the end of the plan. We post to ${ctx.platformName} ${this.scheduling.ruleSummary(ctx.account)}.`,
+      );
+    }
+    return slots;
   }
 
   async draftVariants(
@@ -172,10 +267,27 @@ export class AgentService {
     dto: ClassConstructor<T>,
     request: { prompt: string; jsonSchema: Record<string, unknown> },
   ): Promise<T> {
-    const raw = await this.model.generateJson({
-      system: SYSTEM_PROMPT,
-      ...request,
-    });
+    return (await this.askGrounded(dto, request, false)).output;
+  }
+
+  /** Searches the web first when asked and switched on; otherwise a plain request. */
+  private async askGrounded<T extends object>(
+    dto: ClassConstructor<T>,
+    request: { prompt: string; jsonSchema: Record<string, unknown> },
+    searchWeb: boolean,
+  ): Promise<{ output: T; grounding: GroundingInfo | null }> {
+    const full = { system: SYSTEM_PROMPT, ...request };
+    const { data: raw, grounding } =
+      searchWeb && this.model.canSearchWeb
+        ? await this.model.generateGrounded(full)
+        : { data: await this.model.generateJson(full), grounding: null };
+    return { output: await this.validated(dto, raw), grounding };
+  }
+
+  private async validated<T extends object>(
+    dto: ClassConstructor<T>,
+    raw: unknown,
+  ): Promise<T> {
     const instance = plainToInstance(dto, raw);
     const errors = await validate(instance);
     if (errors.length > 0) {

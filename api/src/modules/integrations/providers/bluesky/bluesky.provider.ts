@@ -30,6 +30,9 @@ type External = Parameters<
 type ExternalEmbed = ReturnType<typeof app.bsky.embed.external.$build>;
 
 /** Bluesky through the official SDK (`@bsky/sdk` + `@atproto/lex`). */
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+
 @Injectable()
 export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> {
   readonly platform = Platform.Bluesky;
@@ -40,6 +43,22 @@ export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> 
     supportsMetrics: true,
     contentStyle:
       'Short, conversational text post. Links, @mentions and #hashtags become clickable, and the first link gets a preview card.',
+    // Buffer 2026 (3M+ posts) and SocialPilot: evenings, weekends best; the two disagree on mornings.
+    posting: {
+      maxPerDay: 3,
+      minSpacingMinutes: 120,
+      windows: [
+        { days: WEEKDAYS, start: '18:00', end: '21:00', weight: 3 },
+        { days: [0, 6], start: '17:00', end: '21:00', weight: 3 },
+        { days: WEEKDAYS, start: '09:00', end: '11:00', weight: 1 },
+        { days: [0], start: '09:00', end: '11:00', weight: 1 },
+      ],
+      avoid: [{ days: ALL, start: '00:00', end: '07:00', weight: 1 }],
+      source: 'Buffer 2026 and SocialPilot studies of Bluesky posts',
+      limits: [
+        '5,000 write points an hour and 35,000 a day per account; a post costs 3 (Bluesky)',
+      ],
+    },
     connect: 'credentials',
     media: {
       required: false,

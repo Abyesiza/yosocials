@@ -106,6 +106,12 @@ export class PostTargetResponseDto {
   })
   options: Record<string, unknown> | null;
   @ApiPropertyOptional({ nullable: true }) scheduledAt: Date | null;
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Why Aby Socials picked this time; null once a person sets the time',
+  })
+  scheduleReason: string | null;
   @ApiPropertyOptional({ nullable: true }) publishedAt: Date | null;
   @ApiPropertyOptional({ nullable: true }) externalUrl: string | null;
   @ApiPropertyOptional({ nullable: true }) lastError: string | null;
@@ -127,6 +133,7 @@ export class PostTargetResponseDto {
       status: target.status,
       options: target.options,
       scheduledAt: target.scheduledAt,
+      scheduleReason: target.scheduleReason,
       publishedAt: target.publishedAt,
       externalUrl: target.externalUrl,
       lastError: target.lastError,

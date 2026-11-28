@@ -41,6 +41,7 @@ export async function startTestApp(): Promise<TestApp> {
     JWT_SECRET: randomBytes(32).toString('base64'),
     AUTH_RATE_LIMIT_PER_MINUTE: '10000',
     GEMINI_API_KEY: '',
+    GEMINI_SEARCH_GROUNDING: 'false',
     SCHEDULER_ENABLED: 'false',
     TIKTOK_CLIENT_KEY: 'test-client-key',
     TIKTOK_CLIENT_SECRET: 'test-client-secret',
@@ -65,7 +66,12 @@ export async function startTestApp(): Promise<TestApp> {
   const { LANGUAGE_MODEL } =
     await import('../../src/modules/agent/interfaces/language-model.interface.js');
 
-  const model = { modelName: 'fake-model', generateJson: vi.fn() };
+  const model = {
+    modelName: 'fake-model',
+    canSearchWeb: false,
+    generateJson: vi.fn(),
+    generateGrounded: vi.fn(),
+  };
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LANGUAGE_MODEL)
     .useValue(model)

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Chip, Input } from "@/app/components/ui";
 import { toLocalInput } from "@/app/lib/format";
 
@@ -16,11 +17,14 @@ export function WhenPicker({
   onWhen,
   scheduledAt,
   onScheduledAt,
+  children,
 }: {
   when: When;
   onWhen: (w: When) => void;
   scheduledAt: string;
   onScheduledAt: (v: string) => void;
+  /** Shown under the time when scheduling, e.g. suggested times. */
+  children?: ReactNode;
 }) {
   return (
     <fieldset>
@@ -42,6 +46,7 @@ export function WhenPicker({
           className="mt-3 max-w-xs"
         />
       )}
+      {when === "schedule" && children}
     </fieldset>
   );
 }

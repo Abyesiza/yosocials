@@ -36,6 +36,8 @@ const UPLOAD_TIMEOUT_MS = 5 * 60_000;
  * view count (that needs the MTProto user API), so this provider is
  * publish-only.
  */
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+
 @Injectable()
 export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto> {
   readonly platform = Platform.Telegram;
@@ -46,6 +48,25 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
     supportsMetrics: false,
     contentStyle:
       'Channel broadcast message. Can be longer and more detailed; emojis and short paragraphs work well.',
+    // No timing study exists; every post notifies subscribers, so keep to daytime and evening.
+    posting: {
+      maxPerDay: 3,
+      minSpacingMinutes: 120,
+      windows: [
+        { days: ALL, start: '08:00', end: '10:00', weight: 2 },
+        { days: ALL, start: '18:00', end: '21:00', weight: 2 },
+        { days: ALL, start: '10:00', end: '18:00', weight: 1 },
+      ],
+      avoid: [
+        { days: ALL, start: '22:00', end: '24:00', weight: 1 },
+        { days: ALL, start: '00:00', end: '07:00', weight: 1 },
+      ],
+      source:
+        'Daytime and evening: no published study of Telegram channel timing (each post notifies subscribers)',
+      limits: [
+        'About 20 messages a minute per group or channel, 1 a second per chat (Telegram Bot API)',
+      ],
+    },
     connect: 'credentials',
     // Uploaded as multipart: core.telegram.org/bots/api#sending-files (Bot API 10.5, checked 2026-11-28).
     media: {

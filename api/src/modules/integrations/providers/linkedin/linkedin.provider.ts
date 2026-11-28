@@ -35,6 +35,8 @@ const METRICS: LinkedInMetricType[] = [
   'RESHARE',
 ];
 
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+
 @Injectable()
 export class LinkedInProvider implements PlatformProvider<LinkedInCredentials> {
   readonly platform = Platform.LinkedIn;
@@ -47,6 +49,26 @@ export class LinkedInProvider implements PlatformProvider<LinkedInCredentials> {
     metricsIntervalMinutes: 360,
     contentStyle:
       'A professional post for LinkedIn: a strong first line (only about 200 characters show before “see more”), short paragraphs, a clear takeaway or question, and 3 to 5 #hashtags at the end.',
+    // Sprout 2026 and Buffer 2026 (4.8M posts): weekday late morning to late afternoon; weekends weakest.
+    posting: {
+      maxPerDay: 1,
+      minSpacingMinutes: 18 * 60,
+      windows: [
+        { days: [2, 3, 4], start: '11:00', end: '17:00', weight: 3 },
+        { days: [3, 4, 5], start: '15:00', end: '18:00', weight: 2 },
+        { days: [1], start: '13:00', end: '15:00', weight: 1 },
+      ],
+      avoid: [
+        { days: [0, 6], start: '00:00', end: '24:00', weight: 1 },
+        { days: ALL, start: '00:00', end: '08:00', weight: 1 },
+        { days: ALL, start: '20:00', end: '24:00', weight: 1 },
+      ],
+      source:
+        'Sprout Social 2026, Buffer 2026 and Later 2026 studies of LinkedIn posts',
+      limits: [
+        '150 Share on LinkedIn calls per member per day, uploads included (LinkedIn API)',
+      ],
+    },
     connect: 'oauth',
     // Images, Videos and MultiImage APIs, and LinkedIn Help a548372 (organic video), checked 2026-11-28.
     media: {

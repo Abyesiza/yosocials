@@ -3,6 +3,7 @@ import { WorkspacesModule } from '../workspaces/workspaces.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountsModule } from '../accounts/accounts.module.js';
 import { IntegrationsModule } from '../integrations/integrations.module.js';
+import { SchedulingModule } from '../scheduling/scheduling.module.js';
 import { PostTarget } from './entities/post-target.entity.js';
 import { Post } from './entities/post.entity.js';
 import { MediaController } from './media.controller.js';
@@ -15,6 +16,7 @@ import { PostsService } from './posts.service.js';
     TypeOrmModule.forFeature([Post, PostTarget]),
     AccountsModule,
     IntegrationsModule,
+    SchedulingModule,
   ],
   controllers: [PostsController, MediaController],
   providers: [PostsService],

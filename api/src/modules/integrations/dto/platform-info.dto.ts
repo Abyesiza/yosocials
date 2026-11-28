@@ -3,6 +3,7 @@ import { Platform } from '../../../common/enums/platform.enum.js';
 import type { LengthUnit } from '../../../common/text/text-length.js';
 import type {
   ImageSpec,
+  PostingPolicy,
   VideoSpec,
 } from '../interfaces/platform-provider.interface.js';
 
@@ -64,4 +65,12 @@ export class PlatformInfoDto {
     description: 'null: text only',
   })
   media: MediaCapabilitiesDto | null;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    description:
+      'When and how often to post: maxPerDay, minSpacingMinutes, windows and avoid ({days 0–6, start, end "HH:MM", weight}) in the audience’s local time, source, limits',
+  })
+  posting: PostingPolicy;
 }

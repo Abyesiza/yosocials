@@ -6,6 +6,7 @@ import { useSWRConfig } from "swr";
 import { Button, Card, ErrorNote, PageHeader } from "@/app/components/ui";
 import { FormSkeleton } from "@/app/components/skeletons";
 import { api } from "@/app/lib/api/client";
+import { AudienceCard } from "./audience-card";
 import { MembersCard } from "./members-card";
 import { WorkspaceCard } from "./workspace-card";
 import { useWorkspace } from "./workspace-context";
@@ -19,6 +20,7 @@ export function SettingsView() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="space-y-6">
           <WorkspaceCard />
+          <AudienceCard />
           <DangerZone />
         </div>
         <MembersCard />

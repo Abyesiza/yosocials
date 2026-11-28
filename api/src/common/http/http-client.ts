@@ -4,15 +4,23 @@
  * the platform's own error message, so callers never parse raw responses.
  */
 export class PlatformApiError extends Error {
+  /** How long the platform asked us to wait before trying again (429s). */
+  readonly retryAfterMs?: number;
+  /** The account hit the platform's own daily posting cap (TikTok). */
+  readonly dailyLimitReached: boolean;
+
   constructor(
     message: string,
     readonly status: number,
     /** True when retrying later may succeed (rate limits, 5xx, timeouts). */
     readonly retryable: boolean,
     readonly body?: unknown,
+    options: { retryAfterMs?: number; dailyLimitReached?: boolean } = {},
   ) {
     super(message);
     this.name = 'PlatformApiError';
+    this.retryAfterMs = options.retryAfterMs;
+    this.dailyLimitReached = options.dailyLimitReached ?? false;
   }
 }
 
@@ -105,9 +113,55 @@ export async function requestWithHeaders<T>(
       response.status,
       retryable,
       body,
+      {
+        retryAfterMs:
+          response.status === 429
+            ? parseRetryAfter(response.headers, body)
+            : undefined,
+      },
     );
   }
   return { body: body as T, headers: response.headers };
+}
+
+/**
+ * How long a rate-limited platform asked us to wait, in ms: `Retry-After`
+ * (seconds or a date), Discord's `retry_after` and Telegram's
+ * `parameters.retry_after` (seconds), X's `x-rate-limit-reset` (epoch
+ * seconds), Mastodon's `X-RateLimit-Reset` (ISO date).
+ */
+export function parseRetryAfter(
+  headers: Headers,
+  body: unknown,
+  now = Date.now(),
+): number | undefined {
+  const record =
+    body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const parameters =
+    record.parameters && typeof record.parameters === 'object'
+      ? (record.parameters as Record<string, unknown>)
+      : {};
+  const seconds = (value: unknown): number | undefined => {
+    const n = typeof value === 'string' ? Number(value) : value;
+    return typeof n === 'number' && Number.isFinite(n) && n >= 0
+      ? Math.ceil(n * 1000)
+      : undefined;
+  };
+  const until = (value: string | null): number | undefined => {
+    if (!value) return undefined;
+    const epoch = Number(value);
+    const at = Number.isFinite(epoch) ? epoch * 1000 : Date.parse(value);
+    return Number.isFinite(at) ? Math.max(0, Math.ceil(at - now)) : undefined;
+  };
+  const header = headers.get('retry-after');
+  return (
+    seconds(header ?? undefined) ??
+    (header ? until(header) : undefined) ??
+    seconds(record.retry_after) ??
+    seconds(parameters.retry_after) ??
+    until(headers.get('x-rate-limit-reset')) ??
+    until(headers.get('x-ratelimit-reset'))
+  );
 }
 
 /** Quotes bare integers of 16+ digits in JSON array or field positions, before JSON.parse rounds them. */

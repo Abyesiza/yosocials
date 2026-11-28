@@ -13,6 +13,7 @@ import type {
   AddMemberDto,
   CreateWorkspaceDto,
   UpdateMemberDto,
+  UpdateWorkspaceDto,
 } from './dto/workspace.dto.js';
 import { WorkspaceMember } from './entities/workspace-member.entity.js';
 import { Workspace } from './entities/workspace.entity.js';
@@ -79,8 +80,23 @@ export class WorkspacesService {
     return workspace;
   }
 
-  async rename(workspaceId: string, name: string): Promise<Workspace> {
-    await this.workspaces.update(workspaceId, { name });
+  /** Renames the workspace and sets its audience; absent fields are kept. */
+  async update(
+    workspaceId: string,
+    dto: UpdateWorkspaceDto,
+  ): Promise<Workspace> {
+    const changes = {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.audienceCountry !== undefined && {
+        audienceCountry: dto.audienceCountry,
+      }),
+      ...(dto.audienceTimeZone !== undefined && {
+        audienceTimeZone: dto.audienceTimeZone,
+      }),
+    };
+    if (Object.keys(changes).length > 0) {
+      await this.workspaces.update(workspaceId, changes);
+    }
     return this.get(workspaceId);
   }
 

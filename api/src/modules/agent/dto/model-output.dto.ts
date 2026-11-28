@@ -2,8 +2,8 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
-  IsISO8601,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
   ValidateNested,
@@ -23,9 +23,9 @@ export class ModelTargetOutput {
   @MaxLength(10_000)
   text: string;
 
-  /** ISO 8601 with a UTC offset. */
-  @IsISO8601({ strict: true })
-  scheduledAt: string;
+  /** The audience-local day, "YYYY-MM-DD"; the engine picks the time. */
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  date: string;
 }
 
 export class ModelPostOutput {

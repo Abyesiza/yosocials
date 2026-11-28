@@ -50,6 +50,10 @@ export class PostTarget extends BaseEntity {
   @Column({ type: 'timestamptz', nullable: true })
   scheduledAt: Date | null;
 
+  /** Why Aby Socials picked `scheduledAt`; cleared when a person sets the time. */
+  @Column({ type: 'text', nullable: true })
+  scheduleReason: string | null;
+
   @Column({ type: 'int', default: 0 })
   attempts: number;
 

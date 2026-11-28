@@ -16,6 +16,7 @@ import {
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
+  ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 import type { User } from '../users/entities/user.entity.js';
@@ -82,12 +83,15 @@ export class WorkspaceController {
 
   @Patch()
   @RequireRole(WorkspaceRole.Admin)
+  @ApiOperation({
+    summary: 'Rename the workspace, or set its audience country and time zone',
+  })
   @ApiOkResponse({ type: WorkspaceResponseDto })
-  async rename(
+  async update(
     @CurrentWorkspace() ctx: WorkspaceContext,
     @Body() dto: UpdateWorkspaceDto,
   ): Promise<WorkspaceResponseDto> {
-    const workspace = await this.workspaces.rename(ctx.workspaceId, dto.name);
+    const workspace = await this.workspaces.update(ctx.workspaceId, dto);
     return WorkspaceResponseDto.from(workspace, ctx.role);
   }
 

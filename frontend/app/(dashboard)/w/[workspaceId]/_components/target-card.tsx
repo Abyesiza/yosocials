@@ -7,6 +7,7 @@ import type { MediaItem, PostTarget, TikTokOptions } from "@/app/lib/api/types";
 import { compact, dateTime, toLocalInput } from "@/app/lib/format";
 import { EngagementHistory } from "./engagement-history";
 import { filesFor, MediaGallery, useTakesMedia } from "./media-gallery";
+import { ChangeTime } from "./schedule-suggestions";
 import { describeTikTok, TikTokSettings, useDisclosure, type MediaSummary } from "./tiktok-settings";
 
 export const EDITABLE = ["draft", "scheduled", "failed"];
@@ -25,6 +26,8 @@ export function TargetCard({
   onSave,
   media,
   postMedia,
+  zone,
+  onReschedule,
 }: {
   target: PostTarget;
   editable: boolean;
@@ -32,6 +35,10 @@ export function TargetCard({
   onSave: (changes: { text?: string; scheduledAt?: string | null; options?: TikTokOptions }) => void;
   media: MediaSummary;
   postMedia: MediaItem[];
+  /** Audience time zone for suggested times. */
+  zone: string;
+  /** Moves the time; throws the API's message (like a daily limit) for the panel to show. */
+  onReschedule?: (scheduledAt: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(target.text);
@@ -50,6 +57,9 @@ export function TargetCard({
         <div className="min-w-0 flex-1 text-sm">
           <p className="flex items-center gap-1.5 font-semibold text-foreground"><PlatformIcon platform={account.platform} size={14} /> {account.displayName}</p>
           <p className="text-xs text-muted-foreground">{timing(target)}</p>
+          {target.scheduleReason && !target.publishedAt && (
+            <p className="mt-1 text-xs text-muted-foreground">Why this time: {target.scheduleReason}</p>
+          )}
         </div>
         <StatusBadge status={target.status} />
       </div>
@@ -82,8 +92,11 @@ export function TargetCard({
         <p className={`mt-3 text-xs ${target.status === "processing" ? "text-warning" : "text-destructive"}`}>{target.lastError}</p>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {editable && !editing && <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit post</Button>}
+        {editable && !editing && onReschedule && (target.status === "draft" || target.status === "scheduled") && (
+          <ChangeTime accountId={account.id} zone={zone} current={target.scheduledAt} onPick={onReschedule} />
+        )}
         {target.externalUrl && (
           <a href={target.externalUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground sm:min-h-0">
             View on {platformLabel(account.platform)} <LuExternalLink className="h-3.5 w-3.5" aria-hidden />

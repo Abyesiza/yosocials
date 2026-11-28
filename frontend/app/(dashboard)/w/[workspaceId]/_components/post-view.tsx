@@ -10,12 +10,14 @@ import { api, useApi } from "@/app/lib/api/client";
 import type { PlatformInfo, Post, PublishOutcome } from "@/app/lib/api/types";
 import { dateTime } from "@/app/lib/format";
 import { MediaPicker, toMediaBody, type DraftMedia } from "./media-picker";
+import { resolveZone } from "./calendar-utils";
 import { EDITABLE, TargetCard } from "./target-card";
 import { useWorkspace } from "./workspace-context";
 
 export function PostView() {
   const { postId } = useParams<{ postId: string }>();
-  const { base, href, can } = useWorkspace();
+  const { base, href, can, workspace } = useWorkspace();
+  const zone = resolveZone(workspace?.audienceTimeZone);
   const router = useRouter();
   const { data: post, error, mutate } = useApi<Post>(`${base}/posts/${postId}`);
   const { data: caps } = useApi<PlatformInfo[]>("/integrations");
@@ -92,6 +94,11 @@ export function PostView() {
               saving={busy === `save-${t.id}`}
               media={summary}
               postMedia={post.media}
+              zone={zone}
+              onReschedule={async (scheduledAt) => {
+                await api(`${base}/posts/${post.id}/targets/${t.id}`, { method: "PATCH", body: { scheduledAt } });
+                await mutate();
+              }}
               onSave={(changes) => run(`save-${t.id}`, () => api(`${base}/posts/${post.id}/targets/${t.id}`, { method: "PATCH", body: changes }))}
             />
           ))}

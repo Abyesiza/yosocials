@@ -27,6 +27,8 @@ const UPLOAD_TIMEOUT_MS = 3 * 60_000;
  * Discord channels via webhooks. Engagement is limited to reaction counts on
  * the message, which the webhook token is allowed to read back.
  */
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+
 @Injectable()
 export class DiscordProvider implements PlatformProvider<DiscordCredentialsDto> {
   readonly platform = Platform.Discord;
@@ -37,6 +39,21 @@ export class DiscordProvider implements PlatformProvider<DiscordCredentialsDto> 
     supportsMetrics: true,
     contentStyle:
       'Community announcement in a server channel. Markdown is supported; keep it friendly and skimmable.',
+    // No timing study exists; Discord warns that frequent pings make members mute or leave.
+    posting: {
+      maxPerDay: 1,
+      minSpacingMinutes: 24 * 60,
+      windows: [
+        { days: ALL, start: '18:00', end: '22:00', weight: 2 },
+        { days: [0, 6], start: '12:00', end: '18:00', weight: 1 },
+      ],
+      avoid: [{ days: ALL, start: '00:00', end: '09:00', weight: 1 }],
+      source:
+        'Member evenings: no published study of Discord timing; Discord advises few announcements',
+      limits: [
+        'Per-webhook limits are set at runtime; Discord replies with a wait time when they’re hit',
+      ],
+    },
     connect: 'credentials',
     // discord.com/developers/docs/reference#uploading-files and resources/webhook#execute-webhook (checked 2026-11-28).
     media: {

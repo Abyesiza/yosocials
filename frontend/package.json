@@ -11,6 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@fullcalendar/react": "7.1.5",
     "@hookform/resolvers": "^7.0.7",
     "@mediabunny/aac-encoder": "1.65.0",
     "@mui/icons-material": "^9.4.0",
@@ -23,6 +24,7 @@
     "react-hook-form": "^7.92.0",
     "react-icons": "^5.7.0",
     "swr": "^2.5.1",
+    "temporal-polyfill": "1.0.8",
     "uploadthing": "^7.7.4",
     "zod": "^4.6.7"
   },

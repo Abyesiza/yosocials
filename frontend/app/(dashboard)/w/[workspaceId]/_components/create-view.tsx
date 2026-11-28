@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { LuSparkles } from "react-icons/lu";
 import { Button, ButtonLink, Card, EmptyState, ErrorNote, PageHeader, Textarea } from "@/app/components/ui";
@@ -11,12 +11,18 @@ import { graphemes, toLocalInput } from "@/app/lib/format";
 import { AccountPicker } from "./account-picker";
 import { MediaPicker, toMediaBody, type DraftMedia } from "./media-picker";
 import { lengthFor, PlatformPreview } from "./platform-preview";
+import { resolveZone } from "./calendar-utils";
 import { RoleGate } from "./role-gate";
+import { SuggestedTimes } from "./suggested-times";
 import { tiktokIssues, TikTokSettings, useDisclosure, type MediaSummary } from "./tiktok-settings";
 import { WhenPicker, type When } from "./when-picker";
 import { useWorkspace } from "./workspace-context";
 
 const isFuture = (local: string) => new Date(local).getTime() > Date.now();
+const isoOf = (local: string) => {
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
 const SUBMIT_LABEL: Record<When, string> = { now: "Publish now", schedule: "Schedule post", draft: "Save draft" };
 
 export function CreateView() {
@@ -28,7 +34,8 @@ export function CreateView() {
 }
 
 function Composer() {
-  const { base, href, can } = useWorkspace();
+  const { base, href, can, workspace } = useWorkspace();
+  const zone = resolveZone(workspace?.audienceTimeZone);
   const router = useRouter();
   const { data: accounts } = useApi<Account[]>(`${base}/accounts`);
   const { data: caps } = useApi<PlatformInfo[]>("/integrations");
@@ -40,8 +47,11 @@ function Composer() {
   const [media, setMedia] = useState<DraftMedia[]>([]);
   const [tiktok, setTiktok] = useState<Record<string, TikTokOptions>>({});
   const disclosure = useDisclosure();
-  const [when, setWhen] = useState<When>("now");
-  const [scheduledAt, setScheduledAt] = useState(() => toLocalInput(new Date(Date.now() + 3_600_000)));
+  // The calendar links here with `?at=<ISO>` for the slot that was clicked.
+  const at = useSearchParams().get("at");
+  const preset = at && isFuture(at) ? new Date(at) : null;
+  const [when, setWhen] = useState<When>(preset ? "schedule" : "now");
+  const [scheduledAt, setScheduledAt] = useState(() => toLocalInput(preset ?? new Date(Date.now() + 3_600_000)));
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState<"submit" | "ai" | null>(null);
 
@@ -130,7 +140,11 @@ function Composer() {
               onDisclose={(on) => disclosure.set(a.id, on)}
             />
           ))}
-          <WhenPicker when={when} onWhen={setWhen} scheduledAt={scheduledAt} onScheduledAt={setScheduledAt} />
+          <WhenPicker when={when} onWhen={setWhen} scheduledAt={scheduledAt} onScheduledAt={setScheduledAt}>
+            {chosen.length > 0 && (
+              <SuggestedTimes accounts={chosen} caps={chosenCaps} zone={zone} selected={isoOf(scheduledAt)} onPick={(iso) => setScheduledAt(toLocalInput(new Date(iso)))} />
+            )}
+          </WhenPicker>
           {blockers.length > 0 && (
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
               {blockers.map((b) => <li key={b}>{b}</li>)}

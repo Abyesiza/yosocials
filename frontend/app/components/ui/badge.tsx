@@ -17,7 +17,7 @@ export function Badge({ variant = "secondary", children }: { variant?: BadgeVari
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-semibold tracking-wide",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide",
         VARIANTS[variant],
       )}
     >

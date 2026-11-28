@@ -4,8 +4,10 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDate,
   IsInt,
+  IsISO31661Alpha2,
   IsOptional,
   IsString,
   IsTimeZone,
@@ -16,6 +18,8 @@ import {
   MinLength,
 } from 'class-validator';
 import { PostResponseDto } from '../../posts/dto/post-response.dto.js';
+import { TrendSnapshotDto } from '../../trends/dto/trends.dto.js';
+import type { GroundingInfo } from '../interfaces/language-model.interface.js';
 
 export class PlanCalendarDto {
   @ApiProperty({
@@ -60,14 +64,50 @@ export class PlanCalendarDto {
   @Max(21, { message: 'Choose between 1 and 21 posts a week' })
   postsPerWeekPerAccount = 4;
 
-  @ApiPropertyOptional({ example: 'Africa/Kampala', default: 'UTC' })
+  @ApiPropertyOptional({
+    example: 'Africa/Kampala',
+    description: "Defaults to the workspace's audience time zone",
+  })
   @IsOptional()
   @IsTimeZone({ message: 'Choose a time zone from the list' })
-  timezone = 'UTC';
+  timezone?: string;
+
+  @ApiPropertyOptional({
+    example: 'UG',
+    description:
+      "Where the audience lives (ISO 3166-1 alpha-2). Defaults to the workspace's audience country",
+  })
+  @IsOptional()
+  @IsISO31661Alpha2({ message: 'Choose a country from the list' })
+  country?: string;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Give the AI what’s trending for the audience country (Google Trends, Mastodon, Bluesky)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  useTrends = true;
+
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Let the AI search the web first (only when GEMINI_SEARCH_GROUNDING is on; a paid Gemini key)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  searchWeb = false;
 }
 
 export class PlanCalendarResponseDto {
   @ApiProperty() model: string;
+
+  @ApiProperty({
+    example: 'Africa/Kampala',
+    description: 'The audience time zone the times were picked in',
+  })
+  timeZone: string;
 
   @ApiProperty({
     type: [PostResponseDto],
@@ -78,7 +118,24 @@ export class PlanCalendarResponseDto {
 
   @ApiProperty({
     type: [String],
-    description: 'Suggestions dropped because they broke a platform rule',
+    description:
+      'Suggestions dropped because they broke a platform rule or no time was free',
   })
   skipped: string[];
+
+  @ApiPropertyOptional({
+    type: TrendSnapshotDto,
+    nullable: true,
+    description: 'The trends the AI was given; null when none were used',
+  })
+  trends: TrendSnapshotDto | null;
+
+  @ApiPropertyOptional({
+    type: 'object',
+    nullable: true,
+    additionalProperties: true,
+    description:
+      'Present when the AI searched the web. Google’s terms: show searchEntryPointHtml and the sources unmodified, to this person only, and don’t store or share them.',
+  })
+  grounding: GroundingInfo | null;
 }

@@ -3,20 +3,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { LuSparkles } from "react-icons/lu";
-import { Button, ButtonLink, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "@/app/components/ui";
+import { Button, ButtonLink, Card, EmptyState, PageHeader } from "@/app/components/ui";
 import { FormSkeleton } from "@/app/components/skeletons";
 import { api, useApi } from "@/app/lib/api/client";
-import type { Account, PlanResult } from "@/app/lib/api/types";
+import type { Account, AgentCapabilities, PlanResult, PlatformInfo } from "@/app/lib/api/types";
+import { startOfDayIn, suggestedZone } from "@/app/lib/audience";
 import { FormError, submitWithErrors } from "@/app/lib/forms";
 import { planSchema } from "@/app/lib/validation/schemas";
-import type { z } from "zod";
-import { AccountPicker } from "./account-picker";
+import type { Audience } from "./audience-fields";
+import { AudienceNudge } from "./audience-nudge";
+import { todayIn } from "./calendar-utils";
+import { PlanFormFields, type PlanToggles } from "./plan-form-fields";
 import { PlanResults } from "./plan-results";
 import { RoleGate } from "./role-gate";
+import { TrendsPanel } from "./trends-panel";
 import { useWorkspace } from "./workspace-context";
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 export function PlanView() {
   return (
@@ -27,80 +30,88 @@ export function PlanView() {
 }
 
 function Planner() {
-  const { base, href } = useWorkspace();
+  const { base, href, can, workspace } = useWorkspace();
   const { data: accounts } = useApi<Account[]>(`${base}/accounts`);
+  const { data: caps } = useApi<PlatformInfo[]>("/integrations");
+  const { data: ai } = useApi<AgentCapabilities>(`${base}/agent/capabilities`, { revalidateOnFocus: false });
   const [selected, setSelected] = useState<string[] | null>(null);
+  const [audience, setAudience] = useState<Audience>(() => {
+    const country = workspace?.audienceCountry ?? "";
+    return { country, timeZone: workspace?.audienceTimeZone ?? suggestedZone(country) };
+  });
+  const [toggles, setToggles] = useState<PlanToggles>({ useTrends: true, searchWeb: false });
   const [result, setResult] = useState<PlanResult | null>(null);
-  const [approving, setApproving] = useState(false);
-  const [approveError, setApproveError] = useState<unknown>(null);
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const form = useForm<z.input<typeof planSchema>, unknown, z.output<typeof planSchema>>({
     resolver: zodResolver(planSchema),
-    defaultValues: { brief: "", startDate: today(), days: 7, postsPerWeekPerAccount: 4 },
+    defaultValues: { brief: "", startDate: todayIn(audience.timeZone), days: 7, postsPerWeekPerAccount: 4 },
   });
 
   if (!accounts) return <FormSkeleton fields={4} />;
   if (accounts.length === 0) {
-    return <EmptyState title="Connect an account first" body="AI plans posts for the accounts connected to this workspace." action={<ButtonLink href={href("/accounts")}>Connect an account</ButtonLink>} />;
+    return (
+      <EmptyState
+        title="Connect an account first"
+        body="AI plans posts for the accounts connected to this workspace."
+        action={can("admin") && <ButtonLink href={href("/accounts")}>Connect an account</ButtonLink>}
+      />
+    );
   }
   const chosen = selected ?? accounts.map((a) => a.id);
+  const zone = audience.timeZone;
 
   const onSubmit = submitWithErrors(form, async (values) => {
     setResult(null);
-    setResult(
-      await api<PlanResult>(`${base}/agent/plan`, {
-        body: { ...values, accountIds: chosen, timezone, startDate: new Date(`${values.startDate}T00:00:00`).toISOString() },
-      }),
-    );
+    const plan = await api<PlanResult>(`${base}/agent/plan`, {
+      body: {
+        ...values,
+        accountIds: chosen,
+        startDate: startOfDayIn(values.startDate, zone),
+        timezone: zone,
+        ...(audience.country && { country: audience.country }),
+        useTrends: toggles.useTrends,
+        searchWeb: Boolean(ai?.searchWeb && toggles.searchWeb),
+      },
+    });
+    setResult(plan);
   });
 
-  async function approveAll() {
-    if (!result) return;
-    setApproving(true);
-    setApproveError(null);
-    try {
-      for (const post of result.posts) await api(`${base}/posts/${post.id}/schedule`, { method: "POST", body: {} });
-      setResult({ ...result, posts: result.posts.map((p) => ({ ...p, status: "scheduled", targets: p.targets.map((t) => ({ ...t, status: "scheduled" })) })) });
-    } catch (e) {
-      setApproveError(e);
-    } finally {
-      setApproving(false);
-    }
-  }
+  const addToBrief = (term: string) => {
+    const brief = form.getValues("brief").trim();
+    form.setValue("brief", `${brief}${brief ? "\n" : ""}Trending now: ${term}`, { shouldDirty: true });
+  };
 
-  const { errors, isSubmitting } = form.formState;
+  const { isSubmitting } = form.formState;
   return (
     <div>
-      <PageHeader eyebrow="AI" title="Plan with AI" subtitle="Describe your goal and AI drafts a calendar of posts for your accounts. Nothing is posted until you approve it." />
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <Card className="h-fit p-6">
-          <form onSubmit={onSubmit} noValidate className="space-y-5">
-            <Field label="Brief" hint="Goal, audience, offers, tone. The more specific, the better." error={errors.brief?.message}>
-              <Textarea rows={6} aria-invalid={Boolean(errors.brief)} placeholder="Launch week for our budgeting app. Audience: young professionals in Kampala. Goal: waitlist sign-ups. Friendly, no jargon." {...form.register("brief")} />
-            </Field>
-            <AccountPicker accounts={accounts} selected={chosen} onChange={setSelected} label="Accounts" />
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Start date" error={errors.startDate?.message}>
-                <Input type="date" min={today()} {...form.register("startDate")} />
-              </Field>
-              <Field label="Length">
-                <Select {...form.register("days")}>{[3, 7, 14, 30].map((d) => <option key={d} value={d}>{d} days</option>)}</Select>
-              </Field>
-              <Field label="Posts per week, per account">
-                <Select {...form.register("postsPerWeekPerAccount")}>{[1, 2, 3, 4, 5, 7, 10, 14].map((n) => <option key={n} value={n}>{n}</option>)}</Select>
-              </Field>
-            </div>
-            <p className="text-xs text-muted-foreground">We choose times in your time zone ({timezone}).</p>
-            <FormError form={form} />
-            <Button type="submit" size="lg" loading={isSubmitting} disabled={chosen.length === 0}>
-              <LuSparkles className="h-4 w-4" aria-hidden /> {isSubmitting ? "Planning…" : "Plan my calendar"}
-            </Button>
-          </form>
-        </Card>
-        <section aria-label="Drafts" aria-live="polite">
-          <ErrorNote error={approveError} />
-          <PlanResults result={result} approving={approving} onApproveAll={approveAll} />
+      <AudienceNudge />
+      <PageHeader eyebrow="AI" title="Plan with AI" subtitle="Describe your goal and AI drafts posts at the best times for each platform. Nothing is posted until you approve it." />
+      <div className="grid gap-8 2xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div className="grid content-start gap-6 lg:grid-cols-2 2xl:grid-cols-1">
+          <Card className="h-fit p-6">
+            <form onSubmit={onSubmit} noValidate className="space-y-5">
+              <PlanFormFields
+                form={form}
+                accounts={accounts}
+                caps={caps ?? []}
+                chosen={chosen}
+                onChosen={setSelected}
+                audience={audience}
+                onAudience={setAudience}
+                toggles={toggles}
+                onToggles={setToggles}
+                canSearchWeb={Boolean(ai?.searchWeb)}
+              />
+              <FormError form={form} />
+              <Button type="submit" size="lg" loading={isSubmitting} disabled={chosen.length === 0}>
+                <LuSparkles className="h-4 w-4" aria-hidden /> {isSubmitting ? "Planning…" : "Plan my posts"}
+              </Button>
+            </form>
+          </Card>
+          <TrendsPanel country={audience.country} onAdd={addToBrief} />
+        </div>
+        <section aria-label="Your plan">
+          <PlanResults result={result} caps={caps ?? []} onPosts={(update) => setResult((r) => (r ? { ...r, posts: update(r.posts) } : r))} />
         </section>
       </div>
     </div>

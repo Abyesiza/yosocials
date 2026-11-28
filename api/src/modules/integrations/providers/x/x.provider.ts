@@ -25,6 +25,8 @@ const MAX_IMAGES = 4;
 const LOOKUP_BATCH = 100;
 const POST_ID = /^\d{1,19}$/;
 
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+
 @Injectable()
 export class XProvider implements PlatformProvider<XCredentials> {
   readonly platform = Platform.X;
@@ -38,6 +40,27 @@ export class XProvider implements PlatformProvider<XCredentials> {
     metricsIntervalMinutes: 360,
     contentStyle:
       'A short, punchy post. Lead with the point, one idea per post, 0 to 2 #hashtags. Length is weighted: links count as 23, emoji and CJK characters as 2.',
+    // Buffer 2026 (8.7M posts) and Hootsuite 2025: weekday mornings; Sprout 2026: weekday midday.
+    posting: {
+      maxPerDay: 3,
+      minSpacingMinutes: 120,
+      windows: [
+        { days: [2, 3, 4], start: '08:00', end: '11:00', weight: 3 },
+        { days: [1, 5], start: '08:00', end: '11:00', weight: 2 },
+        { days: [1, 2, 3, 4], start: '12:00', end: '17:00', weight: 1 },
+      ],
+      avoid: [
+        { days: ALL, start: '22:00', end: '24:00', weight: 1 },
+        { days: ALL, start: '00:00', end: '07:00', weight: 1 },
+        { days: [6], start: '00:00', end: '24:00', weight: 1 },
+      ],
+      source:
+        'Buffer 2026, Hootsuite 2025 and Sprout Social 2026 studies of X posts',
+      limits: [
+        '100 posts per 15 minutes per user, 10,000 per day per app (X API)',
+        'Each post is billed: $0.015, or $0.20 with a link',
+      ],
+    },
     connect: 'oauth',
     // docs.x.com/x-api/media/quickstart/best-practices (checked 2026-11-28).
     media: {

@@ -30,7 +30,7 @@ const SIZES: Record<ButtonSize, string> = {
 
 export function buttonClasses(variant: ButtonVariant = "primary", size: ButtonSize = "md") {
   return cn(
-    "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md transition-all active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100",
+    "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full transition-all active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100",
     focusRing,
     VARIANTS[variant],
     SIZES[size],

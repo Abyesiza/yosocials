@@ -49,6 +49,8 @@ const STATUS_OF: Record<string, number> = {
   access_token_invalid: 401,
   scope_not_authorized: 403,
   rate_limit_exceeded: 429,
+  // TikTok answers 403, but the account is fine: it's a daily cap, not lost access.
+  spam_risk_too_many_posts: 429,
 };
 
 /**
@@ -212,10 +214,17 @@ export class TikTokApi {
     if (!(error instanceof PlatformApiError)) return error;
     const code = (error.body as TikTokEnvelope<unknown> | undefined)?.error
       ?.code;
-    return code ? this.toError(code, error.message, error.status) : error;
+    return code
+      ? this.toError(code, error.message, error.status, error.retryAfterMs)
+      : error;
   }
 
-  private toError(code: string, message: string, status: number) {
+  private toError(
+    code: string,
+    message: string,
+    status: number,
+    retryAfterMs?: number,
+  ) {
     const finalStatus = STATUS_OF[code] ?? status;
     return new PlatformApiError(
       FRIENDLY[code] ??
@@ -224,6 +233,10 @@ export class TikTokApi {
       finalStatus,
       finalStatus === 429 || finalStatus >= 500,
       { code },
+      {
+        retryAfterMs,
+        dailyLimitReached: code === 'spam_risk_too_many_posts',
+      },
     );
   }
 

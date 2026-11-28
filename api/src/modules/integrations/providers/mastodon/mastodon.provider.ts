@@ -19,6 +19,8 @@ import { MastodonCredentialsDto } from './mastodon-credentials.dto.js';
 import { instanceIssue, uploadMedia } from './mastodon-media.js';
 import type { MastodonAccount, MastodonStatus } from './mastodon.types.js';
 
+const ALL = [0, 1, 2, 3, 4, 5, 6];
+
 @Injectable()
 export class MastodonProvider implements PlatformProvider<MastodonCredentialsDto> {
   readonly platform = Platform.Mastodon;
@@ -30,6 +32,25 @@ export class MastodonProvider implements PlatformProvider<MastodonCredentialsDto
     supportsMetrics: true,
     contentStyle:
       'Text post (a "toot"). Community prefers CamelCase #hashtags and content warnings for sensitive topics.',
+    // No timing study exists; the home timeline is chronological, so post while the audience is awake.
+    posting: {
+      maxPerDay: 3,
+      minSpacingMinutes: 90,
+      windows: [
+        { days: ALL, start: '08:00', end: '12:00', weight: 2 },
+        { days: ALL, start: '17:00', end: '21:00', weight: 2 },
+        { days: ALL, start: '12:00', end: '17:00', weight: 1 },
+      ],
+      avoid: [
+        { days: ALL, start: '22:00', end: '24:00', weight: 1 },
+        { days: ALL, start: '00:00', end: '08:00', weight: 1 },
+      ],
+      source:
+        'Waking hours: no published study of Mastodon timing (feeds are chronological)',
+      limits: [
+        '300 requests per 5 minutes and about 300 posts per 3 hours per account; 30 uploads per 30 minutes (Mastodon defaults)',
+      ],
+    },
     connect: 'credentials',
     // Mastodon's defaults (docs.joinmastodon.org/entities/Instance/, checked 2026-11-28); servers may lower them.
     media: {

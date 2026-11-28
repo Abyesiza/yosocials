@@ -26,6 +26,8 @@ let calls: RecordedRequest[];
 /** Raw JSON, so tests can send 19-digit ids the way TikTok does. */
 let publishStatus = '{"status":"PROCESSING_DOWNLOAD"}';
 let privacyOptions = ['PUBLIC_TO_EVERYONE', 'SELF_ONLY'];
+/** An error code for TikTok's Direct Post init to answer with, if any. */
+let videoInitError: string | null = null;
 
 const ok = (data: unknown) => ({ body: { data, error: { code: 'ok' } } });
 
@@ -82,7 +84,12 @@ function stub() {
         max_video_post_duration_sec: 300,
       }),
     [`POST ${TT}/v2/post/publish/video/init/`]: () =>
-      ok({ publish_id: 'v_pub_url~v2.1' }),
+      videoInitError
+        ? {
+            status: 403,
+            body: { data: {}, error: { code: videoInitError, message: 'no' } },
+          }
+        : ok({ publish_id: 'v_pub_url~v2.1' }),
     [`POST ${TT}/v2/post/publish/content/init/`]: () =>
       ok({ publish_id: 'p_pub_url~v2.2' }),
     [`POST ${TT}/v2/post/publish/status/fetch/`]: () => ({
@@ -461,6 +468,45 @@ describe('TikTok', () => {
     expect(res.body[0]).toMatchObject({ status: 'failed' });
     expect(res.body[0].error).toMatch(/privacy setting/);
     expect(sent(`${TT}/v2/post/publish/video/init/`)).toHaveLength(0);
+  });
+
+  it('moves a post to the next day’s best time when TikTok’s daily cap is hit', async () => {
+    const video = await upload('video/mp4');
+    const post = await api
+      .post('/posts')
+      .send({
+        body: 'One too many',
+        media: [
+          { path: video.path, contentType: 'video/mp4', size: 5_000_000 },
+        ],
+        targets: [
+          {
+            accountId: tiktokId,
+            options: { mode: 'direct', privacyLevel: 'SELF_ONLY' },
+          },
+        ],
+      })
+      .expect(201);
+
+    videoInitError = 'spam_risk_too_many_posts';
+    const res = await api.post(`/posts/${post.body.id}/publish`).expect(200);
+    videoInitError = null;
+    expect(res.body[0].status).toBe('scheduled');
+    expect(res.body[0].error).toMatch(
+      /^Creator reached TikTok’s daily posting limit, so we moved this post to \w{3} \d{1,2} \w{3}, \d{2}:\d{2} UTC\.$/,
+    );
+
+    const target = (await api.get(`/posts/${post.body.id}`)).body.targets[0];
+    const tomorrow = new Date(Date.now() + 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    expect(target.status).toBe('scheduled');
+    expect(target.scheduledAt.slice(0, 10)).toBe(tomorrow);
+    expect(target.scheduleReason).toMatch(/\(UTC\) is .*TikTok/);
+    // A daily cap isn't lost access.
+    const account = await api.get(`/accounts/${tiktokId}`).expect(200);
+    expect(account.body.status).toBe('active');
+    await api.post(`/posts/${post.body.id}/unschedule`).expect(200);
   });
 
   it('deletes a post’s files from UploadThing with the post', async () => {
