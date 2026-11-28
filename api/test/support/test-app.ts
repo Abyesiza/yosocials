@@ -45,6 +45,9 @@ export async function startTestApp(): Promise<TestApp> {
     TIKTOK_CLIENT_KEY: 'test-client-key',
     TIKTOK_CLIENT_SECRET: 'test-client-secret',
     TIKTOK_REDIRECT_URI: 'https://abysocials.test/integrations/tiktok/callback',
+    X_CLIENT_ID: 'x-client-id',
+    X_CLIENT_SECRET: 'x-client-secret',
+    X_REDIRECT_URI: 'https://abysocials.test/integrations/x/callback',
     // base64 {"apiKey":"sk_test_fake","appId":"testapp","regions":["sea1"]}
     UPLOADTHING_TOKEN:
       'eyJhcGlLZXkiOiAic2tfdGVzdF9mYWtlIiwgImFwcElkIjogInRlc3RhcHAiLCAicmVnaW9ucyI6IFsic2VhMSJdfQ==',

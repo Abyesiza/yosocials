@@ -12,6 +12,9 @@ import { MastodonProvider } from './providers/mastodon/mastodon.provider.js';
 import { TelegramProvider } from './providers/telegram/telegram.provider.js';
 import { TikTokApi } from './providers/tiktok/tiktok-api.js';
 import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
+import { XApi } from './providers/x/x-api.js';
+import { XMediaUploader } from './providers/x/x-media.js';
+import { XProvider } from './providers/x/x.provider.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProviderSession])],
@@ -26,6 +29,9 @@ import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
     DiscordProvider,
     TikTokApi,
     TikTokProvider,
+    XApi,
+    XMediaUploader,
+    XProvider,
     IntegrationsRegistry,
   ],
   exports: [IntegrationsRegistry],

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Platform } from '../../../common/enums/platform.enum.js';
+import type { LengthUnit } from '../../../common/text/text-length.js';
 
 export class MediaCapabilitiesDto {
   @ApiProperty() required: boolean;
@@ -17,8 +18,11 @@ export class PlatformInfoDto {
   @ApiProperty()
   maxTextLength: number;
 
-  @ApiProperty({ enum: ['graphemes', 'characters'] })
-  lengthUnit: 'graphemes' | 'characters';
+  @ApiProperty({
+    enum: ['graphemes', 'characters', 'weighted'],
+    description: 'weighted: X’s count (links 23, CJK and emoji 2)',
+  })
+  lengthUnit: LengthUnit;
 
   @ApiProperty()
   supportsMetrics: boolean;

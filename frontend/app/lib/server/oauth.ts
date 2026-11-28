@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { setSessionCookies, type TokenPair } from "./session";
 
 /** Platforms that connect through their own sign-in page. */
-export const OAUTH_PLATFORMS = ["tiktok"] as const;
+export const OAUTH_PLATFORMS = ["tiktok", "x"] as const;
 export type OAuthPlatform = (typeof OAUTH_PLATFORMS)[number];
 
 export const isOAuthPlatform = (p: string): p is OAuthPlatform =>

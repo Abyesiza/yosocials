@@ -29,15 +29,16 @@ interface Payload {
 @Injectable()
 export class OAuthStateService {
   private readonly key: Buffer;
+  private readonly pkceKey: Buffer;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     // A separate key per purpose, derived from the JWT secret.
-    this.key = createHmac(
-      'sha256',
-      Buffer.from(config.get('JWT_SECRET', { infer: true }), 'base64'),
-    )
-      .update('oauth-state')
-      .digest();
+    const secret = Buffer.from(
+      config.get('JWT_SECRET', { infer: true }),
+      'base64',
+    );
+    this.key = createHmac('sha256', secret).update('oauth-state').digest();
+    this.pkceKey = createHmac('sha256', secret).update('oauth-pkce').digest();
   }
 
   sign(state: OAuthState): string {
@@ -78,6 +79,15 @@ export class OAuthStateService {
         'This sign-in was started by someone else, or for another workspace.',
       );
     }
+  }
+
+  /**
+   * The PKCE code verifier for a sign-in, derived from its state so nothing is
+   * stored between the redirect and the callback. 43 base64url characters
+   * (RFC 7636); only the server can compute it.
+   */
+  codeVerifier(state: string): string {
+    return createHmac('sha256', this.pkceKey).update(state).digest('base64url');
   }
 
   private mac(body: string): string {

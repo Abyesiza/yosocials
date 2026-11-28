@@ -168,7 +168,7 @@ describe('Aby Socials API', () => {
     const res = await http.get('/api/integrations').expect(200);
     expect(
       res.body.map((p: { platform: string }) => p.platform).sort(),
-    ).toEqual(['bluesky', 'discord', 'mastodon', 'telegram', 'tiktok']);
+    ).toEqual(['bluesky', 'discord', 'mastodon', 'telegram', 'tiktok', 'x']);
   });
 
   it('connects accounts, never returning or storing plaintext credentials', async () => {

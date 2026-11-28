@@ -1,13 +1,16 @@
 import type { Platform } from '../../../common/enums/platform.enum.js';
+import type { LengthUnit } from '../../../common/text/text-length.js';
 
 /** What a platform supports, so the agent and UI know what to expect. */
 export interface ProviderCapabilities {
   /** Max length of a post's text, counted the way the platform counts it. */
   maxTextLength: number;
-  /** How `maxTextLength` is counted: Unicode graphemes or UTF-16 characters. */
-  lengthUnit: 'graphemes' | 'characters';
+  /** How `maxTextLength` is counted (see `common/text/text-length.ts`). */
+  lengthUnit: LengthUnit;
   /** Whether engagement numbers can be read back after publishing. */
   supportsMetrics: boolean;
+  /** Least time between metrics reads; longer where each read is billed (X). Default 30. */
+  metricsIntervalMinutes?: number;
   /** Short note on what a "post" is here, fed to the agent's prompt. */
   contentStyle: string;
   /** How accounts connect: pasted credentials, or the platform's OAuth sign-in. */
@@ -77,13 +80,17 @@ export type PublishCheck =
   | { state: 'published'; externalId?: string; externalUrl?: string }
   | { state: 'failed'; reason: string };
 
-/** Accounts that connect through the platform's OAuth sign-in. */
+/**
+ * Accounts that connect through the platform's OAuth sign-in. `codeVerifier`
+ * is a PKCE verifier derived from the signed state, the same on both calls;
+ * platforms without PKCE ignore it.
+ */
 export interface OAuthConnector {
   isConfigured(): boolean;
   /** Where to send the user to approve access. */
-  authorizeUrl(state: string): string;
+  authorizeUrl(state: string, codeVerifier: string): string;
   /** Exchanges the authorization code for credentials ready for `verify`. */
-  exchange(code: string): Promise<object>;
+  exchange(code: string, codeVerifier: string): Promise<object>;
 }
 
 /**

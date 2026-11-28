@@ -3,7 +3,7 @@
  * api/src/modules/*\/dto). Keep in sync when a DTO changes.
  */
 
-export type Platform = "bluesky" | "mastodon" | "telegram" | "discord" | "tiktok";
+export type Platform = "bluesky" | "mastodon" | "telegram" | "discord" | "tiktok" | "x";
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer";
 export type AccountPersona = "individual" | "influencer" | "company";
 export type AccountStatus = "active" | "needs_reconnect";
@@ -48,7 +48,8 @@ export interface PlatformInfo {
   platform: Platform;
   displayName: string;
   maxTextLength: number;
-  lengthUnit: "graphemes" | "characters";
+  /** weighted: X’s count (links 23, CJK and emoji 2). */
+  lengthUnit: "graphemes" | "characters" | "weighted";
   supportsMetrics: boolean;
   connect: "credentials" | "oauth";
   /** False while an OAuth platform's app credentials aren't configured. */

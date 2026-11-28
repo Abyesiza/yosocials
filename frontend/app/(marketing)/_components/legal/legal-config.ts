@@ -7,7 +7,7 @@ export const LEGAL = {
   contactEmail: SITE.email.support,
   privacyEmail: SITE.email.privacy,
   minimumAge: 13,
-  effectiveDate: "27 November 2026",
+  effectiveDate: "28 November 2026",
 } as const;
 
 /** Official policies of the platforms users can connect (see app/lib/platforms.ts). */
@@ -18,7 +18,7 @@ export const PLATFORM_POLICIES = [
   { name: "Discord", terms: "https://discord.com/terms", privacy: "https://discord.com/privacy", live: true },
   { name: "YouTube", terms: "https://www.youtube.com/t/terms", privacy: "https://policies.google.com/privacy", live: false },
   { name: "Meta (Facebook, Instagram, Threads, WhatsApp)", terms: "https://www.facebook.com/terms", privacy: "https://www.facebook.com/privacy/policy", live: false },
-  { name: "X", terms: "https://x.com/tos", privacy: "https://x.com/privacy", live: false },
+  { name: "X", terms: "https://x.com/tos", privacy: "https://x.com/privacy", live: true },
   { name: "LinkedIn", terms: "https://www.linkedin.com/legal/user-agreement", privacy: "https://www.linkedin.com/legal/privacy-policy", live: false },
   { name: "TikTok", terms: "https://www.tiktok.com/legal/terms-of-service", privacy: "https://www.tiktok.com/legal/privacy-policy", live: true },
   { name: "Pinterest", terms: "https://policy.pinterest.com/terms-of-service", privacy: "https://policy.pinterest.com/privacy-policy", live: false },

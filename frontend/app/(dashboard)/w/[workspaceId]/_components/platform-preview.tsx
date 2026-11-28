@@ -2,10 +2,12 @@
 
 import { Card, cn, PlatformIcon, platformLabel, Textarea } from "@/app/components/ui";
 import type { Account, PlatformInfo } from "@/app/lib/api/types";
-import { graphemes } from "@/app/lib/format";
+import { graphemes, xWeightedLength } from "@/app/lib/format";
 
 export function lengthFor(text: string, cap?: PlatformInfo) {
-  return cap?.lengthUnit === "graphemes" ? graphemes(text) : text.length;
+  if (cap?.lengthUnit === "graphemes") return graphemes(text);
+  if (cap?.lengthUnit === "weighted") return xWeightedLength(text);
+  return text.length;
 }
 
 /** One account's version of the post, with its own limit and optional override. */
@@ -45,6 +47,9 @@ export function PlatformPreview({
       </div>
       {mediaCount > 0 && cap && !cap.media && (
         <p className="mb-2 text-xs text-muted-foreground">{label} gets the text only; attached media isn’t posted there yet.</p>
+      )}
+      {cap?.media && cap.media.maxImages > 0 && mediaCount > cap.media.maxImages && (
+        <p className="mb-2 text-xs font-medium text-warning">{label} takes up to {cap.media.maxImages} photos in a post.</p>
       )}
       {cap?.media?.required && mediaCount === 0 && (
         <p className="mb-2 text-xs font-medium text-warning">{label} needs a video or photos.</p>

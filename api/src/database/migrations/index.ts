@@ -2,6 +2,7 @@ import { InitialSchema1795087165021 } from './1795087165021-InitialSchema.js';
 import { UsersAndWorkspaces1795091215267 } from './1795091215267-UsersAndWorkspaces.js';
 import { ProviderSessions1795097702710 } from './1795097702710-ProviderSessions.js';
 import { TikTokAndMedia1795813463918 } from './1795813463918-TikTokAndMedia.js';
+import { XPlatform1795853839937 } from './1795853839937-XPlatform.js';
 
 /** Migrations, in order. Add each new migration class here. */
 export const MIGRATIONS = [
@@ -9,4 +10,5 @@ export const MIGRATIONS = [
   UsersAndWorkspaces1795091215267,
   ProviderSessions1795097702710,
   TikTokAndMedia1795813463918,
+  XPlatform1795853839937,
 ];
