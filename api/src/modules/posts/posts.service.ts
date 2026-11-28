@@ -13,7 +13,7 @@ import { AccountsService } from '../accounts/accounts.service.js';
 import type { SocialAccount } from '../accounts/entities/social-account.entity.js';
 import type { PublishInput } from '../integrations/interfaces/platform-provider.interface.js';
 import { IntegrationsRegistry } from '../integrations/integrations.registry.js';
-import { countGraphemes } from '../integrations/parse-credentials.js';
+import { textLength } from '../../common/text/text-length.js';
 import type { CreatePostDto } from './dto/create-post.dto.js';
 import type { ListPostsQueryDto } from './dto/list-posts-query.dto.js';
 import type { MediaItemDto } from './dto/media-item.dto.js';
@@ -332,10 +332,7 @@ export class PostsService {
 
   textLengthIssue(text: string, account: SocialAccount): string | null {
     const { capabilities, displayName } = this.registry.get(account.platform);
-    const length =
-      capabilities.lengthUnit === 'graphemes'
-        ? countGraphemes(text)
-        : text.length;
+    const length = textLength(text, capabilities.lengthUnit);
     return length > capabilities.maxTextLength
       ? `${displayName} (${account.handle}) allows ${capabilities.maxTextLength} ${capabilities.lengthUnit}; this text has ${length}`
       : null;

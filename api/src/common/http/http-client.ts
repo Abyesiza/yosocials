@@ -23,6 +23,8 @@ export interface RequestOptions {
   json?: unknown;
   /** Sent as application/x-www-form-urlencoded (OAuth token endpoints). */
   form?: Record<string, string>;
+  /** Sent as multipart/form-data (file uploads); fetch sets the boundary. */
+  multipart?: FormData;
   timeoutMs?: number;
   /** Parse integers too big for a JS number (e.g. TikTok video ids) as strings. */
   bigIntsAsStrings?: boolean;
@@ -50,12 +52,13 @@ export async function requestJson<T>(
   if (options.form !== undefined) {
     headers['content-type'] = 'application/x-www-form-urlencoded';
   }
-  const payload =
-    options.form !== undefined
+  const payload: BodyInit | undefined =
+    options.multipart ??
+    (options.form !== undefined
       ? new URLSearchParams(options.form).toString()
       : options.json === undefined
         ? undefined
-        : JSON.stringify(options.json);
+        : JSON.stringify(options.json));
 
   let response: Response;
   try {

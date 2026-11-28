@@ -32,7 +32,7 @@ const sections: LegalSection[] = [
           <li><strong>Workspaces:</strong> workspace names, who is a member, and each member&apos;s role.</li>
           <li><strong>Connected social accounts:</strong> the handle, display name, profile link, profile picture link and platform ID of each account you connect, plus the credentials you give us to act for it (for example an app password, access token, bot token or webhook URL) and any login session the platform issues.</li>
           <li><strong>Your content:</strong> posts, drafts, per-platform versions, schedules, briefs you give the AI planner, and each account&apos;s persona and brand-voice notes.</li>
-          <li><strong>Media you upload:</strong> the videos and photos you attach to posts, with their file type, size and video length. They are stored at a web address only Aby Socials links to, so that platforms such as TikTok can fetch them when you publish.</li>
+          <li><strong>Media you upload:</strong> the videos and photos you attach to posts, with their file type, size and video length. They are stored at a web address only Aby Socials links to, so that platforms such as TikTok can fetch them when you publish; for X, we send the files to X ourselves.</li>
           <li><strong>Performance data:</strong> public engagement counts (likes, reposts, replies, quotes) for posts you publish through {LEGAL.product}, collected for 30 days after publishing.</li>
           <li><strong>Technical data:</strong> session cookies and the basic request information our servers need to run and secure the service.</li>
         </ul>

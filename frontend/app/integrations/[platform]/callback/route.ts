@@ -12,7 +12,7 @@ import {
 } from "@/app/lib/server/oauth";
 import { platformLabel } from "@/app/components/ui/platform";
 
-// The platform sends the user back here (TIKTOK_REDIRECT_URI) with a code, or an error.
+// The platform sends the user back here (TIKTOK_REDIRECT_URI, X_REDIRECT_URI) with a code, or an error.
 export async function GET(request: NextRequest, { params }: RouteContext<"/integrations/[platform]/callback">) {
   const { platform } = await params;
   if (!isOAuthPlatform(platform)) {

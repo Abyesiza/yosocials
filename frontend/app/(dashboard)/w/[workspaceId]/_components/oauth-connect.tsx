@@ -24,6 +24,18 @@ const SPECS: Partial<Record<Platform, OAuthSpec>> = {
       "You can remove access at any time in TikTok: Settings and privacy → Security and permissions → Apps and services permissions.",
     ],
   },
+  x: {
+    intro: "Sign in with X and approve access. Aby Socials never sees your X password.",
+    permissions: [
+      "Read your name, username and profile picture, so you can tell which account is connected.",
+      "Post text, photos and videos you write or approve in Aby Socials. Nothing is posted without you.",
+      "Read likes, reposts, replies, quotes, views and link clicks of posts made through Aby Socials, for up to 30 days.",
+    ],
+    notes: [
+      "Aby Socials doesn’t like, repost, follow, reply or send messages for you, and doesn’t read your timeline or messages.",
+      "You can remove access at any time in X: Settings and privacy → Security and account access → Apps and sessions → Connected apps.",
+    ],
+  },
 };
 
 /** Connects a platform through its own sign-in page (OAuth) instead of pasted credentials. */

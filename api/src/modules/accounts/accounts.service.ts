@@ -60,7 +60,10 @@ export class AccountsService {
   ): { url: string; state: string } {
     const oauth = this.oauthOf(this.registry.get(platform));
     const state = this.states.sign({ ...ctx, platform });
-    return { url: oauth.authorizeUrl(state), state };
+    return {
+      url: oauth.authorizeUrl(state, this.states.codeVerifier(state)),
+      state,
+    };
   }
 
   /** Finishes an OAuth sign-in and connects (or reconnects) the account. */
@@ -75,7 +78,7 @@ export class AccountsService {
     this.states.verify(state, { ...ctx, platform });
     const rejected = `${provider.displayName} didn’t accept the sign-in`;
     const credentials = await this.verifyOrReject(
-      () => oauth.exchange(code),
+      () => oauth.exchange(code, this.states.codeVerifier(state)),
       rejected,
     );
     const verified = await this.verifyOrReject(

@@ -39,4 +39,25 @@ export class ProviderSessionsService implements ProviderSessionStore {
   async remove(key: string): Promise<void> {
     await this.sessions.delete({ key });
   }
+
+  /**
+   * Runs `fn` holding a Postgres advisory lock on `key`, so two processes
+   * never refresh the same session at once (rotated refresh tokens are
+   * single use). `fn` gets a store on the locked transaction, so it needs no
+   * second connection; the lock is released when `fn` settles.
+   */
+  withLock<T>(
+    key: string,
+    fn: (store: ProviderSessionStore) => Promise<T>,
+  ): Promise<T> {
+    return this.sessions.manager.transaction(async (tx) => {
+      await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+      return fn(
+        new ProviderSessionsService(
+          tx.getRepository(ProviderSession),
+          this.crypto,
+        ),
+      );
+    });
+  }
 }

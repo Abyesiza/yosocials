@@ -1,7 +1,7 @@
 import type { PlatformKey } from "@/app/lib/platforms";
 
 // Platforms with a working connector in the API today.
-export const LIVE_PLATFORMS: PlatformKey[] = ["bluesky", "mastodon", "telegram", "discord", "tiktok"];
+export const LIVE_PLATFORMS: PlatformKey[] = ["bluesky", "mastodon", "telegram", "discord", "tiktok", "x"];
 
 export const NAV_LINKS = [
   { href: "#features", label: "Features" },

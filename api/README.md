@@ -93,6 +93,7 @@ Target lifecycle: `draft → scheduled → publishing → published | failed`. P
 | Telegram | bot token + channel; the bot must be an admin that can post | none (the Bot API can't read view counts) |
 | Discord | channel webhook URL | reaction count |
 | TikTok | OAuth sign-in (“Continue with TikTok”); needs a video or photos | views, likes, comments, shares |
+| X | OAuth 2.0 sign-in with PKCE (“Continue with X”); text, up to 4 photos or 1 video | impressions (as views), likes, reposts, replies, quotes |
 
 ### Bluesky
 
@@ -112,6 +113,16 @@ Built on the [Content Posting API](https://developers.tiktok.com/doc/content-pos
 - **Posting:** per target, `options.mode` is `direct` (Direct Post, `video.publish`) or `inbox` (a draft the creator finishes in TikTok, `video.upload`). Direct posts re-query creator info first and respect the creator’s privacy options, comment/Duet/Stitch settings and maximum video length. Media is uploaded from the browser to UploadThing through the web app’s `/api/uploadthing` route, which asks `POST /media/uploads` to authorize the editor and name each file `<workspaceId>_<uuid>.<ext>`. TikTok pulls it from `MEDIA_PUBLIC_BASE_URL` (`abysocials.com/media/<id>`, proxied to `<appId>.ufs.sh/f/<id>`), so that domain must be verified on the TikTok app (URL properties).
 - **Status:** TikTok publishes asynchronously. Targets stay `processing` until the status endpoint reports `PUBLISH_COMPLETE` (or the creator posts the inbox draft). Video ids are 19-digit numbers, parsed as strings so they aren’t rounded.
 - **Review:** until TikTok audits the app, Direct Posts can only be private (“Only me”).
+
+### X
+
+Built on the X API v2, following [api.x.com/2/openapi.json](https://api.x.com/2/openapi.json) and the [OAuth 2.0 PKCE guide](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code).
+
+- **Setup:** a Web App (confidential client) in the X developer console with `X_REDIRECT_URI` (`https://abysocials.com/integrations/x/callback`) registered as a callback URL. Set `X_CLIENT_ID`, `X_CLIENT_SECRET` and `X_REDIRECT_URI`; `X_SCOPES` defaults to `tweet.read tweet.write users.read media.write offline.access` (space-separated; `offline.access` gives the refresh token scheduled posts need).
+- **Connecting:** the same signed-state flow as TikTok, plus PKCE (S256). The code verifier is an HMAC of the signed state, so nothing is stored between the redirect and the callback. The code is exchanged with HTTP Basic client auth; `/2/users/me` then names the account. Tokens (two-hour access, rotating refresh) are stored encrypted in `provider_sessions` under `x:<user id>`. Refreshes run under a Postgres advisory lock, because X invalidates a refresh token once it's used. Disconnecting revokes both tokens.
+- **Posting:** `POST /2/tweets`. X can't pull media from a URL, so files are read from `MEDIA_PUBLIC_BASE_URL` and uploaded: photos with one `POST /2/media/upload` (5 MB limit), videos streamed in 4 MB chunks (`initialize` → `append` → `finalize`), then polled until processed (up to 5 minutes). Text is limited to 280 in X's weighted count (`common/text/text-length.ts`: links 23, emoji and CJK 2). Duplicate-content rejections fail the post without flagging the account for reconnecting.
+- **Metrics:** `GET /2/tweets` in batches of 100 with `public_metrics,non_public_metrics,organic_metrics` (private metrics cover our own posts from the last 30 days, matching the tracking window). Impressions are stored as views; the private counters (link and profile clicks) stay in the snapshot's `raw`.
+- **Cost:** X bills every request from prepaid credits (posts with links cost more), so X metrics are read every 6 hours (`metricsIntervalMinutes`) instead of every 30 minutes. Set a spending limit in the developer console.
 
 To add a platform: add it to `common/enums/platform.enum.ts`, implement `PlatformProvider` in `modules/integrations/providers/<name>/`, and register it in `integrations.module.ts` and `integrations.registry.ts`. Then run `npm run migration:generate src/database/migrations/Add<Name>` to update the enum, and add the migration to `database/migrations/index.ts`.
 

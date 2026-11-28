@@ -17,7 +17,7 @@ import { PostMetricSnapshot } from './entities/post-metric-snapshot.entity.js';
 
 /** Posts are tracked for this long after publishing. */
 const TRACK_FOR_DAYS = 30;
-/** Minimum gap between two snapshots of the same target. */
+/** Minimum gap between two snapshots of the same target; providers may ask for longer. */
 const MIN_INTERVAL_MINUTES = 30;
 
 const ENGAGEMENT_SQL =
@@ -62,11 +62,13 @@ export class AnalyticsService {
 
     const byAccount = new Map<string, PostTarget[]>();
     for (const target of due) {
-      if (
-        !this.registry.get(target.account.platform).capabilities.supportsMetrics
-      ) {
-        continue;
-      }
+      const { supportsMetrics, metricsIntervalMinutes } = this.registry.get(
+        target.account.platform,
+      ).capabilities;
+      const readAgainAt =
+        (target.metricsUpdatedAt?.getTime() ?? 0) +
+        (metricsIntervalMinutes ?? MIN_INTERVAL_MINUTES) * 60_000;
+      if (!supportsMetrics || readAgainAt > Date.now()) continue;
       byAccount.set(target.accountId, [
         ...(byAccount.get(target.accountId) ?? []),
         target,

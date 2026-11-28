@@ -28,14 +28,3 @@ export async function parseCredentialsDto<T extends object>(
   }
   return instance;
 }
-
-/** Counts user-perceived characters (e.g. one emoji = 1). */
-export function countGraphemes(text: string): number {
-  let count = 0;
-  for (const _ of new Intl.Segmenter(undefined, {
-    granularity: 'grapheme',
-  }).segment(text)) {
-    count++;
-  }
-  return count;
-}

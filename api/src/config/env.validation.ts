@@ -113,6 +113,27 @@ export class EnvironmentVariables {
   TIKTOK_SCOPES =
     'user.info.basic,user.info.profile,video.publish,video.upload,video.list';
 
+  /** X app OAuth 2.0 credentials from console.x.com. X stays unavailable until all three are set. */
+  @IsOptional()
+  @IsString()
+  X_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  X_CLIENT_SECRET?: string;
+
+  /** Must match a callback URL registered on the X app exactly. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  X_REDIRECT_URI?: string;
+
+  /** Space-separated OAuth 2.0 scopes (X rejects commas and the old read/write permission names). */
+  @Matches(/^[a-z.]+( [a-z.]+)*$/, {
+    message:
+      'X_SCOPES must be space-separated OAuth 2.0 scopes, e.g. "tweet.read tweet.write"',
+  })
+  X_SCOPES = 'tweet.read tweet.write users.read media.write offline.access';
+
   /** UploadThing token (dashboard → API Keys). Media uploads stay off until it's set. */
   @IsOptional()
   @IsString()
