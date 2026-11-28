@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LuExternalLink, LuRefreshCw, LuTrash2 } from "react-icons/lu";
-import { Avatar, Badge, Button, Card, ErrorNote, PlatformIcon } from "@/app/components/ui";
+import { Avatar, Badge, Button, Card, ErrorNote, PlatformIcon, platformLabel } from "@/app/components/ui";
 import { api } from "@/app/lib/api/client";
 import type { Account, AccountPersona } from "@/app/lib/api/types";
 import { useWorkspace } from "./workspace-context";
@@ -28,7 +28,7 @@ export function AccountCard({ account, onChange }: { account: Account; onChange:
   }
 
   const disconnect = () => {
-    if (!confirm(`Disconnect ${account.handle}? Its posts and stats are removed from Aby Socials.`)) return;
+    if (!confirm(`Disconnect ${account.handle}? This removes its posts and analytics from Aby Socials. Posts already published stay live on ${platformLabel(account.platform)}. This can’t be undone.`)) return;
     void run("remove", () => api(`${base}/accounts/${account.id}`, { method: "DELETE" }));
   };
 
@@ -48,13 +48,13 @@ export function AccountCard({ account, onChange }: { account: Account; onChange:
             </a>
           )}
         </div>
-        {account.status === "needs_reconnect" ? <Badge variant="destructive">Reconnect</Badge> : <Badge variant="success">Connected</Badge>}
+        {account.status === "needs_reconnect" ? <Badge variant="destructive">Needs reconnecting</Badge> : <Badge variant="success">Connected</Badge>}
       </div>
       {account.lastError && <p className="mt-3 text-xs text-destructive">{account.lastError}</p>}
       {can("admin") && (
         <div className="mt-4 flex gap-2 border-t border-border pt-4">
           <Button size="sm" variant="outline" loading={busy === "verify"} onClick={() => run("verify", () => api(`${base}/accounts/${account.id}/verify`, { method: "POST" }))}>
-            <LuRefreshCw className="h-3.5 w-3.5" aria-hidden /> Check
+            <LuRefreshCw className="h-3.5 w-3.5" aria-hidden /> Check connection
           </Button>
           <Button size="sm" variant="destructive-ghost" loading={busy === "remove"} onClick={disconnect}>
             <LuTrash2 className="h-3.5 w-3.5" aria-hidden /> Disconnect

@@ -5,17 +5,17 @@ const optionalText = (max: number) =>
   z
     .string()
     .trim()
-    .max(max, `Keep it under ${max} characters`)
+    .max(max, `Use ${max} characters or fewer`)
     .transform((v) => v || undefined)
     .optional();
 
-const name = z.string().trim().min(1, "Required").max(120, "Keep it under 120 characters");
-const email = z.email("Enter a valid email address").max(320);
-const newPassword = z.string().min(8, "Use at least 8 characters").max(128, "Keep it under 128 characters");
+const name = z.string().trim().min(1, "Enter a name").max(120, "Use 120 characters or fewer");
+const email = z.email("Enter an email address, like name@example.com").max(320, "Use 320 characters or fewer");
+const newPassword = z.string().min(8, "Use at least 8 characters").max(128, "Use 128 characters or fewer");
 
 export const signInSchema = z.object({
   email,
-  password: z.string().min(1, "Enter your password").max(128),
+  password: z.string().min(1, "Enter your password").max(128, "Use 128 characters or fewer"),
 });
 
 export const signUpSchema = z.object({
@@ -30,12 +30,12 @@ export const workspaceSchema = z.object({ name });
 export const profileSchema = z.object({ name });
 
 export const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Enter your current password").max(128),
+  currentPassword: z.string().min(1, "Enter your current password").max(128, "Use 128 characters or fewer"),
   newPassword,
 });
 
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Enter your password to confirm").max(128),
+  password: z.string().min(1, "Enter your password to confirm").max(128, "Use 128 characters or fewer"),
   confirm: z.boolean().refine((v) => v, "Tick the box to confirm"),
 });
 
@@ -45,14 +45,14 @@ export const memberSchema = z.object({
 });
 
 export const planSchema = z.object({
-  brief: z.string().trim().min(10, "Describe the goal in at least 10 characters").max(4000),
+  brief: z.string().trim().min(10, "Describe the goal in at least 10 characters").max(4000, "Use 4000 characters or fewer"),
   startDate: z.string().min(1, "Pick a start date"),
-  days: z.coerce.number().int().min(1).max(31),
-  postsPerWeekPerAccount: z.coerce.number().int().min(1).max(21),
+  days: z.coerce.number().int("Enter a whole number of days").min(1, "Plan at least 1 day").max(31, "Plan up to 31 days at a time"),
+  postsPerWeekPerAccount: z.coerce.number().int("Enter a whole number of posts").min(1, "Choose at least 1 post a week").max(21, "Choose up to 21 posts a week"),
 });
 
 export const connectSchema = z.object({
-  credentials: z.record(z.string(), z.string().trim().min(1, "Required")),
+  credentials: z.record(z.string(), z.string().trim().min(1, "Fill in this field")),
   persona: z.enum(["individual", "influencer", "company"]),
   voice: optionalText(2000),
 });

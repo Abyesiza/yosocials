@@ -95,7 +95,7 @@ describe('TelegramProvider', () => {
   it('rejects a bot that is not a channel admin', async () => {
     mockFetch(routes('member'));
     await expect(new TelegramProvider().verify(creds)).rejects.toThrow(
-      /must be an admin/,
+      /an admin of the channel/,
     );
   });
 });

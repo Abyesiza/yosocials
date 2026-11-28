@@ -17,7 +17,7 @@ export function ValueNarrative() {
     <section aria-labelledby="value-heading" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28 lg:px-8">
       <p className="section-label">Why Aby Socials</p>
       <h2 id="value-heading" className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-        Social media shouldn&apos;t be a second job
+        Social media shouldn’t be a second job
       </h2>
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         <List title="Without it" items={PROBLEMS} Icon={LuX} tone="text-destructive" />

@@ -86,9 +86,9 @@ export class XProvider implements PlatformProvider<XCredentials> {
       issues.push('write something or attach media.');
     const images = media.filter((m) => m.kind === 'image');
     if (images.length > MAX_IMAGES)
-      issues.push(`X takes up to ${MAX_IMAGES} photos in a post.`);
+      issues.push(`use up to ${MAX_IMAGES} photos.`);
     if (images.some((m) => m.size > MAX_IMAGE_BYTES)) {
-      issues.push('X takes photos up to 5 MB. Use a smaller photo.');
+      issues.push('use photos of 5 MB or less. Swap in a smaller photo.');
     }
     return issues;
   }
@@ -98,7 +98,8 @@ export class XProvider implements PlatformProvider<XCredentials> {
     input: PublishInput,
   ): Promise<PublishResult> {
     const issues = this.readinessIssues(input);
-    if (issues.length > 0) throw new BadRequestException(`X: ${issues[0]}`);
+    if (issues.length > 0)
+      throw new BadRequestException(`To post to X, ${issues[0]}`);
 
     const mediaIds = await this.uploader.upload(userId, input.media);
     const body = {
@@ -121,7 +122,7 @@ export class XProvider implements PlatformProvider<XCredentials> {
       // X has no idempotency keys: a request that timed out may have landed.
       if (error instanceof PlatformApiError && error.status === 0) {
         throw new PlatformApiError(
-          `${error.message}. It may have reached X, so check the profile before retrying.`,
+          'We lost contact with X while sending this. It may have been posted, so check the profile before you try again.',
           0,
           false,
         );

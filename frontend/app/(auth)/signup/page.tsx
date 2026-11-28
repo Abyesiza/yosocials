@@ -5,7 +5,7 @@ import { AuthForm } from "../auth-form";
 
 export const metadata = publicPageMetadata({
   title: "Sign up",
-  description: "Create a free Aby Socials account and let the AI agent plan, publish and track posts across Bluesky, Mastodon, Telegram and Discord.",
+  description: "Sign up free for Aby Socials. Plan with AI, then publish and track posts across LinkedIn, X, TikTok, Bluesky, Mastodon, Telegram and Discord.",
   path: "/signup",
 });
 

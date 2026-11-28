@@ -7,10 +7,10 @@ import { cn, focusRing } from "@/app/components/ui";
 import { SCREENS } from "./content";
 
 const STEPS = [
-  { title: "Connect your accounts", body: "Add Bluesky, Mastodon, Telegram or Discord in a minute. Credentials are verified and stored encrypted.", screen: SCREENS.accounts },
-  { title: "Write once, or let AI plan", body: "Draft a post and tune it for each platform, or give the agent a brief and get a calendar of drafts.", screen: SCREENS.create },
-  { title: "Approve and schedule", body: "Review the week at a glance. Approved posts go out on time, with retries if a platform hiccups.", screen: SCREENS.calendar },
-  { title: "See what works", body: "Likes, reposts and replies roll in every 15 minutes, per post and per account, all in one place.", screen: SCREENS.analytics },
+  { title: "Connect your accounts", body: "Add LinkedIn, X, TikTok, Bluesky, Mastodon, Telegram or Discord in a minute. We check each connection and store it encrypted.", screen: SCREENS.accounts },
+  { title: "Write once, or let AI plan", body: "Draft a post and tune it for each platform, or describe a goal and let AI plan a calendar of drafts.", screen: SCREENS.create },
+  { title: "Approve and schedule", body: "Review the week at a glance. Approved posts go out on time, and we retry if a platform is briefly down.", screen: SCREENS.calendar },
+  { title: "See what works", body: "Likes, reposts and replies update through the day, per post and per account, all in one place.", screen: SCREENS.analytics },
 ];
 
 const ADVANCE_MS = 6000;
@@ -56,7 +56,7 @@ export function HowItWorks() {
         </div>
 
         <div className="mt-12 grid items-center gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <div role="tablist" aria-label="Steps" className="space-y-3">
+          <div role="tablist" aria-label="How it works steps" className="space-y-3">
             {STEPS.map((step, i) => (
               <button
                 key={step.title}

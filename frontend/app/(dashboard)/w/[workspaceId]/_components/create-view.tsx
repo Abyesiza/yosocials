@@ -17,7 +17,7 @@ import { WhenPicker, type When } from "./when-picker";
 import { useWorkspace } from "./workspace-context";
 
 const isFuture = (local: string) => new Date(local).getTime() > Date.now();
-const SUBMIT_LABEL: Record<When, string> = { now: "Publish", schedule: "Schedule", draft: "Save draft" };
+const SUBMIT_LABEL: Record<When, string> = { now: "Publish now", schedule: "Schedule post", draft: "Save draft" };
 
 export function CreateView() {
   return (
@@ -84,7 +84,7 @@ function Composer() {
 
   const submit = () =>
     run("submit", async () => {
-      if (when === "schedule" && !isFuture(scheduledAt)) throw new Error("Pick a time in the future.");
+      if (when === "schedule" && !isFuture(scheduledAt)) throw new Error("Choose a time in the future.");
       const post = await api<Post>(`${base}/posts`, {
         body: {
           body,
@@ -141,7 +141,7 @@ function Composer() {
         </div>
         <section aria-label="Preview per platform" className="space-y-3 xl:sticky xl:top-24 xl:self-start">
           <h2 className="text-sm font-semibold text-foreground">Preview per platform</h2>
-          {chosen.length === 0 && <EmptyState title="Pick accounts to preview" body="Each platform shows its own character limit." />}
+          {chosen.length === 0 && <EmptyState title="Choose accounts to see previews" body="Each platform shows its own character limit." />}
           {chosen.map((a) => (
             <PlatformPreview
               key={a.id}

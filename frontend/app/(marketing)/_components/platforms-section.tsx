@@ -10,8 +10,8 @@ export function PlatformsSection() {
     <section id="platforms" aria-labelledby="platforms-heading" className="scroll-mt-16 bg-muted/50 py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <p className="section-label">Platforms</p>
-        <h2 id="platforms-heading" className="mt-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl">Every channel, one workspace</h2>
-        <p className="mt-4 max-w-2xl text-muted-foreground">Four platforms work today. The rest are on the way, built on each platform&apos;s official API.</p>
+        <h2 id="platforms-heading" className="mt-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl">Every platform, one workspace</h2>
+        <p className="mt-4 max-w-2xl text-muted-foreground">{LIVE_PLATFORMS.length} platforms work today. The rest are on the way, built on each platform’s official API.</p>
         <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {ORDERED.map((key) => {
             const { Icon, label, color } = platforms[key];

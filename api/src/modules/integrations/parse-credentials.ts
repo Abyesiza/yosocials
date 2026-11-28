@@ -12,7 +12,11 @@ export async function parseCredentialsDto<T extends object>(
   field = 'credentials',
 ): Promise<T> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new BadRequestException(`${field} must be an object`);
+    throw new BadRequestException(
+      field === 'options'
+        ? 'Fill in the post settings and try again.'
+        : 'Fill in the account details and try again.',
+    );
   }
   const instance = plainToInstance(dto, raw);
   const errors = await validate(instance, {
@@ -20,11 +24,9 @@ export async function parseCredentialsDto<T extends object>(
     forbidNonWhitelisted: true,
   });
   if (errors.length > 0) {
-    throw new BadRequestException(
-      errors.flatMap((e) =>
-        Object.values(e.constraints ?? {}).map((m) => `${field}.${m}`),
-      ),
-    );
+    throw new BadRequestException([
+      ...new Set(errors.flatMap((e) => Object.values(e.constraints ?? {}))),
+    ]);
   }
   return instance;
 }

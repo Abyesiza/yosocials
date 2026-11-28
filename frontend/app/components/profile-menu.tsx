@@ -57,7 +57,7 @@ export function ProfileMenu() {
             </div>
           )}
           <Link role="menuitem" href="/me" onClick={close} className={cn(item, "mt-1")}>
-            <LuUser className="h-4 w-4" aria-hidden /> Profile & password
+            <LuUser className="h-4 w-4" aria-hidden /> Profile and password
           </Link>
           <div role="group" aria-label="Theme" className="my-1 grid grid-cols-3 gap-1 px-1">
             {THEMES.map(({ value, label, Icon }) => (

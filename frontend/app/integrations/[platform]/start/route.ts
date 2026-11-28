@@ -10,13 +10,14 @@ import {
   UUID,
   type OAuthCookie,
 } from "@/app/lib/server/oauth";
+import { platformLabel } from "@/app/components/ui/platform";
 
 // `/integrations/<platform>/start?workspace=<id>`: asks the API for a signed state, then leaves for the platform.
 export async function GET(request: NextRequest, { params }: RouteContext<"/integrations/[platform]/start">) {
   const { platform } = await params;
   const workspaceId = request.nextUrl.searchParams.get("workspace") ?? "";
   if (!isOAuthPlatform(platform) || !UUID.test(workspaceId)) {
-    return NextResponse.json({ message: "Not found" }, { status: 404 });
+    return NextResponse.json({ message: "We couldn’t find that page." }, { status: 404 });
   }
 
   const { upstream, renewed, signedOut } = await callApiWithSession(
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/integ
     return NextResponse.redirect(new URL(`/signin?next=${encodeURIComponent(next)}`, request.url), 303);
   }
   if (!upstream?.ok) {
-    const message = await apiMessage(upstream, "Couldn’t start connecting. Try again.");
+    const message = await apiMessage(upstream, `We couldn’t open ${platformLabel(platform)} to connect your account. Try again in a moment.`);
     return redirectTo(request, accountsPage(workspaceId, { connect_error: message }), renewed);
   }
 

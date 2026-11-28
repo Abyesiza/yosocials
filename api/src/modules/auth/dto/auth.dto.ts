@@ -20,21 +20,27 @@ const trim = ({ value }: { value: unknown }): unknown =>
 export class SignUpDto {
   @ApiProperty({ example: 'you@example.com' })
   @Transform(trim)
-  @IsEmail()
-  @MaxLength(320)
+  @IsEmail({}, { message: 'Enter an email address, like name@example.com' })
+  @MaxLength(320, { message: 'Enter an email address, like name@example.com' })
   email: string;
 
   @ApiProperty({ minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX })
-  @IsString()
-  @MinLength(PASSWORD_MIN)
-  @MaxLength(PASSWORD_MAX)
+  @IsString({
+    message: `Use at least ${PASSWORD_MIN} characters for your password`,
+  })
+  @MinLength(PASSWORD_MIN, {
+    message: `Use at least ${PASSWORD_MIN} characters for your password`,
+  })
+  @MaxLength(PASSWORD_MAX, {
+    message: `Use ${PASSWORD_MAX} characters or fewer for your password`,
+  })
   password: string;
 
   @ApiProperty({ example: 'Joel', maxLength: 120 })
   @Transform(trim)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
+  @IsString({ message: 'Enter your name' })
+  @MinLength(1, { message: 'Enter your name' })
+  @MaxLength(120, { message: 'Use 120 characters or fewer for your name' })
   name: string;
 
   @ApiPropertyOptional({
@@ -44,22 +50,26 @@ export class SignUpDto {
   })
   @IsOptional()
   @Transform(trim)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
+  @IsString({ message: 'Enter a workspace name' })
+  @MinLength(1, { message: 'Enter a workspace name' })
+  @MaxLength(120, {
+    message: 'Use 120 characters or fewer for the workspace name',
+  })
   workspaceName?: string;
 }
 
 export class SignInDto {
   @ApiProperty()
   @Transform(trim)
-  @IsEmail()
-  @MaxLength(320)
+  @IsEmail({}, { message: 'Enter an email address, like name@example.com' })
+  @MaxLength(320, { message: 'Enter an email address, like name@example.com' })
   email: string;
 
   @ApiProperty()
-  @IsString()
-  @MaxLength(PASSWORD_MAX)
+  @IsString({ message: 'Enter your password' })
+  @MaxLength(PASSWORD_MAX, {
+    message: `Use ${PASSWORD_MAX} characters or fewer for your password`,
+  })
   password: string;
 }
 
@@ -102,8 +112,10 @@ export class MeResponseDto {
 
 export class DeleteAccountDto {
   @ApiProperty({ description: 'Current password, to confirm' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(PASSWORD_MAX)
+  @IsString({ message: 'Enter your password' })
+  @MinLength(1, { message: 'Enter your password' })
+  @MaxLength(PASSWORD_MAX, {
+    message: `Use ${PASSWORD_MAX} characters or fewer for your password`,
+  })
   password: string;
 }

@@ -56,7 +56,7 @@ export function PostView() {
     });
 
   const remove = () => {
-    if (!confirm("Delete this post from Aby Socials? Anything already published stays live.")) return;
+    if (!confirm("Delete this post from Aby Socials? Anything already published stays live on its platform. This can’t be undone.")) return;
     void run("delete", async () => {
       await api(`${base}/posts/${post.id}`, { method: "DELETE" });
       router.push(href());
@@ -72,7 +72,7 @@ export function PostView() {
 
   return (
     <div>
-      <Link href={href()} className="mb-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><LuArrowLeft className="h-4 w-4" aria-hidden /> Back to feed</Link>
+      <Link href={href()} className="mb-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><LuArrowLeft className="h-4 w-4" aria-hidden /> Back to Home</Link>
       <PageHeader eyebrow={post.source === "agent" ? "Planned by AI" : "Post"} title={post.title ?? "Post"} subtitle={`Created ${dateTime(post.createdAt)}`} />
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid content-start gap-4 lg:grid-cols-2">
@@ -99,13 +99,13 @@ export function PostView() {
               <ErrorNote error={actionError} />
               {editor && unpublished ? (
                 <>
-                  {has("draft") && <Button className="w-full" loading={busy === "schedule"} onClick={() => run("schedule", () => api(`${base}/posts/${post.id}/schedule`, { method: "POST", body: {} }))}>Approve & schedule</Button>}
+                  {has("draft") && <Button className="w-full" loading={busy === "schedule"} onClick={() => run("schedule", () => api(`${base}/posts/${post.id}/schedule`, { method: "POST", body: {} }))}>Approve and schedule</Button>}
                   <Button className="w-full" variant={has("draft") ? "outline" : "primary"} loading={busy === "publish"} onClick={publishNow}>Publish now</Button>
                   {has("scheduled") && <Button className="w-full" variant="outline" loading={busy === "unschedule"} onClick={() => run("unschedule", () => api(`${base}/posts/${post.id}/unschedule`, { method: "POST" }))}>Move back to drafts</Button>}
                   <Button className="w-full" variant="destructive-ghost" loading={busy === "delete"} onClick={remove}>Delete post</Button>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">{unpublished ? "Editors can schedule or publish this post." : "Everything here is live."}</p>
+                <p className="text-sm text-muted-foreground">{unpublished ? "Only editors can schedule or publish this post. Ask a workspace admin for access." : "This post is published on every account."}</p>
               )}
             </div>
           </Card>

@@ -23,7 +23,7 @@ export function ProfileView() {
         <ProfileForm me={me} />
         <PasswordForm />
         <Card className="h-fit">
-          <CardHeader title="Your workspaces" action={<Link href="/workspaces/new" className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"><LuPlus className="h-3.5 w-3.5" aria-hidden /> New</Link>} />
+          <CardHeader title="Your workspaces" action={<Link href="/workspaces/new" className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"><LuPlus className="h-3.5 w-3.5" aria-hidden /> New workspace</Link>} />
           <ul className="divide-y divide-border">
             {me.workspaces.map((w) => (
               <li key={w.id}>

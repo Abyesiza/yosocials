@@ -29,8 +29,8 @@ export function DeleteAccountForm() {
       <CardHeader title="Delete account" />
       <form onSubmit={onSubmit} noValidate className="space-y-4 p-5">
         <p className="text-sm text-muted-foreground">
-          This permanently deletes your profile, your sign-in sessions, and every workspace where you are the only member,
-          with its connected accounts, posts and analytics. Posts already published stay on each platform.{" "}
+          This permanently deletes your profile, logs you out on every device, and deletes every workspace where you’re the only
+          member, with its connected accounts, posts and analytics. Posts already published stay on each platform.{" "}
           <Link href="/data-deletion" className="font-semibold text-primary hover:underline">What gets deleted</Link>
         </p>
         <Field label="Password" error={errors.password?.message}>
@@ -38,7 +38,7 @@ export function DeleteAccountForm() {
         </Field>
         <label className="flex min-h-11 items-start gap-3 text-sm text-foreground">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-[hsl(var(--destructive))]" {...form.register("confirm")} />
-          I understand this can&apos;t be undone.
+          I understand this can’t be undone.
         </label>
         {errors.confirm && <p role="alert" className="text-xs font-medium text-destructive">{errors.confirm.message}</p>}
         <FormError form={form} />

@@ -12,6 +12,9 @@ import { MastodonProvider } from './providers/mastodon/mastodon.provider.js';
 import { TelegramProvider } from './providers/telegram/telegram.provider.js';
 import { TikTokApi } from './providers/tiktok/tiktok-api.js';
 import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
+import { LinkedInApi } from './providers/linkedin/linkedin-api.js';
+import { LinkedInMediaUploader } from './providers/linkedin/linkedin-media.js';
+import { LinkedInProvider } from './providers/linkedin/linkedin.provider.js';
 import { XApi } from './providers/x/x-api.js';
 import { XMediaUploader } from './providers/x/x-media.js';
 import { XProvider } from './providers/x/x.provider.js';
@@ -32,6 +35,9 @@ import { XProvider } from './providers/x/x.provider.js';
     XApi,
     XMediaUploader,
     XProvider,
+    LinkedInApi,
+    LinkedInMediaUploader,
+    LinkedInProvider,
     IntegrationsRegistry,
   ],
   exports: [IntegrationsRegistry],

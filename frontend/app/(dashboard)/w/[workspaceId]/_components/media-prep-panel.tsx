@@ -18,15 +18,15 @@ export interface PrepProgress {
 const FRAMINGS: { value: Framing; label: string; hint: string }[] = [
   { value: "fit", label: "Fit", hint: "Shows the whole picture on a blurred backdrop. Nothing is cut off." },
   { value: "fill", label: "Fill", hint: "Fills the vertical frame; the edges are cropped." },
-  { value: "original", label: "Original", hint: "Keeps the shape and only shrinks it to TikTok’s limits. TikTok may add bars." },
+  { value: "original", label: "Original", hint: "Keeps the shape and only shrinks it to fit platform limits. Some platforms, like TikTok, may add bars." },
 ];
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 function describe({ info }: PendingFile, framing: Framing): string {
   const source = [`${info.width}×${info.height}`, info.fps && `${Math.round(info.fps)} fps`, info.durationSec && clock(info.durationSec)].filter(Boolean).join(" · ");
-  if (framing === "original" && info.ready) return `${source} · ready for TikTok as it is`;
-  const out = framing === "original" ? "resized to TikTok’s limits" : `${TARGET.width}×${TARGET.height}`;
+  if (framing === "original" && info.ready) return `${source} · ready to post as it is`;
+  const out = framing === "original" ? "resized to fit platform limits" : `${TARGET.width}×${TARGET.height}`;
   return `${source} → ${out}, ${info.kind === "video" ? "H.264 MP4" : "JPEG"}`;
 }
 
@@ -67,8 +67,8 @@ export function MediaPrepPanel({
   return (
     <Card className="space-y-4 border-primary/40 p-4">
       <div>
-        <p className="text-sm font-semibold text-foreground">Format for TikTok</p>
-        <p className="text-xs text-muted-foreground">TikTok works best with vertical {TARGET.width}×{TARGET.height} (9:16). Files are prepared in your browser before uploading.</p>
+        <p className="text-sm font-semibold text-foreground">Choose the framing</p>
+        <p className="text-xs text-muted-foreground">Vertical {TARGET.width}×{TARGET.height} (9:16) suits TikTok and phone screens. We prepare your media in your browser before uploading it.</p>
       </div>
       <fieldset disabled={busy} className="space-y-2">
         <legend className="sr-only">Framing</legend>

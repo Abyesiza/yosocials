@@ -48,6 +48,11 @@ export async function startTestApp(): Promise<TestApp> {
     X_CLIENT_ID: 'x-client-id',
     X_CLIENT_SECRET: 'x-client-secret',
     X_REDIRECT_URI: 'https://abysocials.test/integrations/x/callback',
+    LINKEDIN_CLIENT_ID: 'li-client-id',
+    LINKEDIN_CLIENT_SECRET: 'li-client-secret',
+    LINKEDIN_REDIRECT_URI:
+      'https://abysocials.test/integrations/linkedin/callback',
+    LINKEDIN_SCOPES: 'openid profile w_member_social r_member_postAnalytics',
     // base64 {"apiKey":"sk_test_fake","appId":"testapp","regions":["sea1"]}
     UPLOADTHING_TOKEN:
       'eyJhcGlLZXkiOiAic2tfdGVzdF9mYWtlIiwgImFwcElkIjogInRlc3RhcHAiLCAicmVnaW9ucyI6IFsic2VhMSJdfQ==',

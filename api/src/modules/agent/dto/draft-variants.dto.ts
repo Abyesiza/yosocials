@@ -12,15 +12,15 @@ import { Platform } from '../../../common/enums/platform.enum.js';
 
 export class DraftVariantsDto {
   @ApiProperty({ example: 'We just hit 10,000 users, thank the community' })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(4000)
+  @IsString({ message: 'Describe your idea in at least 3 characters' })
+  @MinLength(3, { message: 'Describe your idea in at least 3 characters' })
+  @MaxLength(4000, { message: 'Keep your idea to 4,000 characters or fewer' })
   idea: string;
 
   @ApiProperty({ type: [String], format: 'uuid' })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(20)
+  @IsArray({ message: 'Choose at least one account' })
+  @ArrayMinSize(1, { message: 'Choose at least one account' })
+  @ArrayMaxSize(20, { message: 'Choose up to 20 accounts' })
   @IsUUID('all', { each: true })
   accountIds: string[];
 }

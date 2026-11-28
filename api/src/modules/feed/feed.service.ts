@@ -58,7 +58,7 @@ export class FeedService {
     const days = (query.to.getTime() - query.from.getTime()) / 86_400_000;
     if (days <= 0 || days > MAX_CALENDAR_DAYS) {
       throw new BadRequestException(
-        `"to" must be after "from" and at most ${MAX_CALENDAR_DAYS} days later`,
+        `Choose an end date after the start date, up to ${MAX_CALENDAR_DAYS} days later.`,
       );
     }
     const rows = await this.base(workspaceId, query.platform)

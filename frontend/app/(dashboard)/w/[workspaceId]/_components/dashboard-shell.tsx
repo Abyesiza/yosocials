@@ -27,7 +27,7 @@ function MissingGuard({ children }: { children: ReactNode }) {
   return (
     <EmptyState
       title="Workspace not found"
-      body="It may have been deleted, or you're no longer a member."
+      body="It may have been deleted, or you’re no longer a member."
       action={<ButtonLink href="/dashboard">Go to my workspaces</ButtonLink>}
     />
   );

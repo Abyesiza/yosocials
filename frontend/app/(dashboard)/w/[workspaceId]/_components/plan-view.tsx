@@ -42,7 +42,7 @@ function Planner() {
 
   if (!accounts) return <FormSkeleton fields={4} />;
   if (accounts.length === 0) {
-    return <EmptyState title="Connect an account first" body="The agent writes for the accounts in this workspace." action={<ButtonLink href={href("/accounts")}>Connect an account</ButtonLink>} />;
+    return <EmptyState title="Connect an account first" body="AI plans posts for the accounts connected to this workspace." action={<ButtonLink href={href("/accounts")}>Connect an account</ButtonLink>} />;
   }
   const chosen = selected ?? accounts.map((a) => a.id);
 
@@ -72,7 +72,7 @@ function Planner() {
   const { errors, isSubmitting } = form.formState;
   return (
     <div>
-      <PageHeader eyebrow="AI agent" title="Plan with AI" subtitle="Describe the goal. The agent drafts a calendar for your accounts; nothing posts until you approve it." />
+      <PageHeader eyebrow="AI" title="Plan with AI" subtitle="Describe your goal and AI drafts a calendar of posts for your accounts. Nothing is posted until you approve it." />
       <div className="grid gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card className="h-fit p-6">
           <form onSubmit={onSubmit} noValidate className="space-y-5">
@@ -81,17 +81,17 @@ function Planner() {
             </Field>
             <AccountPicker accounts={accounts} selected={chosen} onChange={setSelected} label="Accounts" />
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Start" error={errors.startDate?.message}>
+              <Field label="Start date" error={errors.startDate?.message}>
                 <Input type="date" min={today()} {...form.register("startDate")} />
               </Field>
-              <Field label="Days">
+              <Field label="Length">
                 <Select {...form.register("days")}>{[3, 7, 14, 30].map((d) => <option key={d} value={d}>{d} days</option>)}</Select>
               </Field>
-              <Field label="Posts / week / account">
+              <Field label="Posts per week, per account">
                 <Select {...form.register("postsPerWeekPerAccount")}>{[1, 2, 3, 4, 5, 7, 10, 14].map((n) => <option key={n} value={n}>{n}</option>)}</Select>
               </Field>
             </div>
-            <p className="text-xs text-muted-foreground">Times are picked for your timezone ({timezone}).</p>
+            <p className="text-xs text-muted-foreground">We choose times in your time zone ({timezone}).</p>
             <FormError form={form} />
             <Button type="submit" size="lg" loading={isSubmitting} disabled={chosen.length === 0}>
               <LuSparkles className="h-4 w-4" aria-hidden /> {isSubmitting ? "Planning…" : "Plan my calendar"}

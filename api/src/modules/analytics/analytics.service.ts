@@ -97,7 +97,9 @@ export class AnalyticsService {
       where: { id: targetId, account: { workspaceId } },
     });
     if (!owned) {
-      throw new NotFoundException(`Target ${targetId} not found`);
+      throw new NotFoundException(
+        'We couldn’t find that post in this workspace.',
+      );
     }
     return this.snapshots.find({
       where: { targetId },

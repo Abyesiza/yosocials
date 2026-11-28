@@ -5,7 +5,7 @@ export const SITE = {
   domain: "abysocials.com",
   tagline: "Plan, post and grow on every platform",
   description:
-    "Aby Socials is the AI social media agent that drafts a content calendar for each account, publishes on time and shows how every post performs. Bluesky, Mastodon, Telegram, Discord and more, in one place.",
+    "Aby Socials uses AI to draft a content calendar for each account, publishes on time and shows how every post performs. LinkedIn, X, TikTok, Bluesky, Mastodon, Telegram, Discord and more, in one place.",
   keywords: [
     "Aby Socials",
     "AI social media agent",

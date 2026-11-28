@@ -47,8 +47,9 @@ export class AccountsService {
   ): Promise<SocialAccount> {
     const provider = this.registry.get(dto.platform);
     const credentials = await provider.parseCredentials(dto.credentials);
-    const verified = await this.verifyOrReject(() =>
-      provider.verify(credentials),
+    const verified = await this.verifyOrReject(
+      () => provider.verify(credentials),
+      `${provider.displayName} didn’t accept these details`,
     );
     return this.save(workspaceId, dto.platform, credentials, verified, dto);
   }
@@ -94,7 +95,7 @@ export class AccountsService {
     const provider = this.registry.get(account.platform);
     if (!provider.creatorInfo) {
       throw new NotFoundException(
-        `${provider.displayName} has no creator info`,
+        `${provider.displayName} doesn’t share account details before posting.`,
       );
     }
     try {
@@ -142,12 +143,12 @@ export class AccountsService {
   private oauthOf(provider: PlatformProvider): OAuthConnector {
     if (!provider.oauth) {
       throw new BadRequestException(
-        `${provider.displayName} connects with credentials, not a sign-in`,
+        `${provider.displayName} connects with details from its settings, not a sign-in.`,
       );
     }
     if (!provider.oauth.isConfigured()) {
       throw new ServiceUnavailableException(
-        `${provider.displayName} isn’t available yet: its app credentials aren’t configured`,
+        `${provider.displayName} isn’t available yet. Ask whoever runs Aby Socials to finish setting it up.`,
       );
     }
     return provider.oauth;
@@ -162,7 +163,10 @@ export class AccountsService {
 
   async findOne(workspaceId: string, id: string): Promise<SocialAccount> {
     const account = await this.accounts.findOneBy({ id, workspaceId });
-    if (!account) throw new NotFoundException(`Account ${id} not found`);
+    if (!account)
+      throw new NotFoundException(
+        'We couldn’t find that account in this workspace.',
+      );
     return account;
   }
 
@@ -172,7 +176,9 @@ export class AccountsService {
     const found = await this.accounts.findBy({ id: In(unique), workspaceId });
     const missing = unique.filter((id) => !found.some((a) => a.id === id));
     if (missing.length > 0) {
-      throw new NotFoundException(`Accounts not found: ${missing.join(', ')}`);
+      throw new NotFoundException(
+        'We couldn’t find some of those accounts in this workspace. Refresh the page and try again.',
+      );
     }
     return found;
   }
@@ -205,6 +211,9 @@ export class AccountsService {
       });
     } catch (error) {
       await this.recordFailure(account, error);
+      if (error instanceof PlatformApiError && !error.retryable) {
+        throw new BadRequestException(error.message);
+      }
       throw error;
     }
     return this.accounts.save(account);
@@ -235,7 +244,10 @@ export class AccountsService {
       .addSelect('a.encryptedCredentials')
       .where('a.id = :id', { id })
       .getOne();
-    if (!row) throw new NotFoundException(`Account ${id} not found`);
+    if (!row)
+      throw new NotFoundException(
+        'We couldn’t find that account in this workspace.',
+      );
     return this.crypto.decryptJson<object>(row.encryptedCredentials);
   }
 
@@ -256,7 +268,7 @@ export class AccountsService {
 
   private async verifyOrReject<T>(
     call: () => Promise<T>,
-    rejected = 'The platform rejected these credentials',
+    rejected = 'The platform didn’t accept these details',
   ): Promise<T> {
     try {
       return await call();

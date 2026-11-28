@@ -36,14 +36,16 @@ export function toPlatformError(error: unknown): unknown {
     x.status === 401
   ) {
     return new PlatformApiError(
-      x.message || 'Bluesky rejected the session',
+      x.message ||
+        'Your Bluesky connection has expired. Reconnect the account to keep posting.',
       401,
       false,
       x.error,
     );
   }
   return new PlatformApiError(
-    x.message || `Bluesky error ${x.error}`,
+    x.message ||
+      'Bluesky couldn’t complete the request. Try again in a moment.',
     x.status ?? 0,
     x.shouldRetry(),
     x.error,

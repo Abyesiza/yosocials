@@ -14,7 +14,7 @@ export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
     intro: "Bluesky connects with your handle and an app password. Never use your main password.",
     steps: [
       "Open Bluesky and go to Settings → Privacy and security → App passwords.",
-      "Click Add App Password and give it a name, for example “AbySocials”.",
+      "Click Add App Password and give it a name, for example “Aby Socials”.",
       "Copy the generated password (xxxx-xxxx-xxxx-xxxx). Bluesky only shows it once.",
       "Enter your full handle below, for example you.bsky.social, and paste the app password.",
     ],
@@ -26,11 +26,11 @@ export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
     ],
   },
   mastodon: {
-    intro: "Mastodon accounts live on an instance, so you create the access token on your own instance.",
+    intro: "Your Mastodon account lives on an instance, such as mastodon.social. You create an access token there so we can post for you.",
     steps: [
       "Sign in to your Mastodon instance in a browser.",
       "Go to Preferences → Development and click New application.",
-      "Name it, for example “AbySocials”, and tick the scopes read:accounts, read:statuses and write:statuses. Untick the rest.",
+      "Name it, for example “Aby Socials”. Under Scopes, tick only read:accounts, read:statuses and write:statuses.",
       "Click Submit, open the new application and copy “Your access token”.",
       "Enter your instance URL below, for example https://mastodon.social, and paste the token.",
     ],
@@ -41,17 +41,17 @@ export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
     ],
   },
   telegram: {
-    intro: "Telegram posts to a channel through a bot you create. You need the bot token and the bot must be an admin of the channel.",
+    intro: "We post to your Telegram channel through a bot you create. You need the bot’s token, and the bot must be an admin of the channel.",
     steps: [
       "In Telegram, open a chat with @BotFather and send /newbot.",
       "Choose a display name and a username ending in “bot”. BotFather replies with an HTTP API token (123456789:AA…). Copy it.",
       "Open your channel, tap its name, then Edit (pencil) → Administrators → Add Administrator. On desktop use ⋮ → Manage channel → Administrators.",
       "Search for your bot by its exact username, select it and turn on “Post Messages”, then save.",
-      "Enter the channel below: @channelname for a public channel, or the numeric id starting with -100 for a private one.",
+      "Enter the channel below: @channelname for a public channel, or the numeric ID starting with -100 for a private one.",
     ],
     tips: [
       "Lost the token? Send /mybots to @BotFather, pick your bot, then API Token.",
-      "To find a private channel's id, forward one of its posts to @userinfobot or @getidsbot.",
+      "To find a private channel’s ID, forward one of its posts to @userinfobot or @getidsbot.",
       "Only the channel owner, or an admin allowed to add admins, can add the bot.",
     ],
     link: { href: "https://t.me/BotFather", label: "Open @BotFather" },
@@ -61,7 +61,7 @@ export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
     ],
   },
   discord: {
-    intro: "Discord posts through a channel webhook. No bot or app is needed.",
+    intro: "We post to Discord through a channel webhook. You don’t need a bot or app.",
     steps: [
       "Open your Discord server and go to Server Settings → Integrations → Webhooks.",
       "Click New Webhook and give it a name.",

@@ -25,6 +25,8 @@ export interface RequestOptions {
   form?: Record<string, string>;
   /** Sent as multipart/form-data (file uploads); fetch sets the boundary. */
   multipart?: FormData;
+  /** Sent as-is, e.g. file bytes PUT to a signed upload URL. */
+  binary?: { data: Blob; contentType: string };
   timeoutMs?: number;
   /** Parse integers too big for a JS number (e.g. TikTok video ids) as strings. */
   bigIntsAsStrings?: boolean;
@@ -36,6 +38,14 @@ export async function requestJson<T>(
   url: string,
   options: RequestOptions = {},
 ): Promise<T> {
+  return (await requestWithHeaders<T>(url, options)).body;
+}
+
+/** `requestJson`, plus the response headers (ids and ETags some platforms only send there). */
+export async function requestWithHeaders<T>(
+  url: string,
+  options: RequestOptions = {},
+): Promise<{ body: T; headers: Headers }> {
   const target = new URL(url);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value === undefined) continue;
@@ -52,7 +62,9 @@ export async function requestJson<T>(
   if (options.form !== undefined) {
     headers['content-type'] = 'application/x-www-form-urlencoded';
   }
+  if (options.binary) headers['content-type'] = options.binary.contentType;
   const payload: BodyInit | undefined =
+    options.binary?.data ??
     options.multipart ??
     (options.form !== undefined
       ? new URLSearchParams(options.form).toString()
@@ -71,9 +83,10 @@ export async function requestJson<T>(
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new PlatformApiError(
-      `Request to ${target.host} failed: ${reason}`,
+      `We couldn’t reach ${target.host}. Try again in a moment.`,
       0,
       true,
+      { reason },
     );
   }
 
@@ -83,14 +96,18 @@ export async function requestJson<T>(
     : undefined;
 
   if (!response.ok) {
+    const retryable = response.status === 429 || response.status >= 500;
     throw new PlatformApiError(
-      extractMessage(body) ?? `${target.host} responded ${response.status}`,
+      extractMessage(body) ??
+        (retryable
+          ? `${target.host} isn’t responding properly right now. Try again in a moment.`
+          : `${target.host} didn’t accept the request.`),
       response.status,
-      response.status === 429 || response.status >= 500,
+      retryable,
       body,
     );
   }
-  return body as T;
+  return { body: body as T, headers: response.headers };
 }
 
 /** Quotes bare integers of 16+ digits in JSON array or field positions, before JSON.parse rounds them. */

@@ -11,6 +11,8 @@ export class UpdateAccountDto {
   @ApiPropertyOptional({ maxLength: 2000, nullable: true })
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(2000, {
+    message: 'Keep the voice description to 2,000 characters or fewer',
+  })
   voice?: string | null;
 }

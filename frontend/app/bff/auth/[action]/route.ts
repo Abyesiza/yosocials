@@ -19,14 +19,14 @@ const PASSTHROUGH = new Map([
 
 export async function POST(request: NextRequest, { params }: Context) {
   if (!isSameOrigin(request)) {
-    return NextResponse.json({ message: "Cross-site request refused" }, { status: 403 });
+    return NextResponse.json({ message: "We couldn’t check where this request came from. Reload the page and try again." }, { status: 403 });
   }
   const { action } = await params;
 
   if (action === "signout") return signOut(request);
 
   const path = PASSTHROUGH.get(action);
-  if (!path) return NextResponse.json({ message: "Not found" }, { status: 404 });
+  if (!path) return NextResponse.json({ message: "We couldn’t find that page." }, { status: 404 });
 
   let upstream: Response;
   try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     });
   } catch {
     return NextResponse.json(
-      { message: "The Aby Socials API is not reachable" },
+      { message: "We couldn’t reach our server. Try again in a moment." },
       { status: 502 },
     );
   }

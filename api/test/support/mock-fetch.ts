@@ -12,6 +12,8 @@ type Handler = (req: RecordedRequest) => {
   body?: unknown;
   /** Sent as-is instead of JSON-encoding `body`. */
   raw?: string;
+  /** Extra response headers (e.g. LinkedIn's x-restli-id). */
+  headers?: Record<string, string>;
 };
 
 function headersOf(init: HeadersInit | undefined): Record<string, string> {
@@ -65,12 +67,17 @@ export function mockFetch(routes: Record<string, Handler>) {
           ([k]) => k.endsWith('*') && key.startsWith(k.slice(0, -1)),
         )?.[1];
       if (!handler) throw new Error(`Unexpected request: ${key}`);
-      const { status = 200, body: payload, raw: rawBody } = handler(req);
+      const {
+        status = 200,
+        body: payload,
+        raw: rawBody,
+        headers: extra,
+      } = handler(req);
       return new Response(
         rawBody ?? (payload === undefined ? null : JSON.stringify(payload)),
         {
           status,
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...extra },
         },
       );
     },

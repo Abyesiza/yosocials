@@ -56,7 +56,7 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
       (member.status === 'administrator' && member.can_post_messages !== false);
     if (!canPost) {
       throw new BadRequestException(
-        `@${bot.username} must be an admin of this chat with permission to post messages`,
+        `Make @${bot.username} an admin of the channel with permission to post messages, then connect again.`,
       );
     }
 

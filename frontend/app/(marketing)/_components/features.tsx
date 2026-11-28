@@ -4,11 +4,11 @@ import { Badge } from "@/app/components/ui";
 
 const FEATURES: { Icon: IconType; title: string; body: string; soon?: boolean }[] = [
   { Icon: LuSparkles, title: "Plan with AI", body: "Describe a goal and get a week of drafts timed for your audience. Nothing posts until you approve it." },
-  { Icon: LuPenLine, title: "Write once, tune per platform", body: "One idea, a version for each account, with that platform's real character limit counted as you type." },
+  { Icon: LuPenLine, title: "Write once, tune per platform", body: "One idea, a version for each account, with that platform’s real character limit counted as you type." },
   { Icon: LuLayoutGrid, title: "One feed for everything", body: "Every post you publish, across every account, in a single Instagram-style feed with its likes and replies." },
-  { Icon: LuChartColumn, title: "Analytics that move", body: "Engagement is captured every 15 minutes, so you see how a post grows, not just where it ended up." },
-  { Icon: LuCalendarDays, title: "Reliable scheduling", body: "Posts go out on time, retry on hiccups and never double-post, even if two schedulers run at once." },
-  { Icon: LuShieldCheck, title: "Teams and roles", body: "Workspaces per brand or client, with owner, admin, editor and viewer roles. Account tokens are encrypted." },
+  { Icon: LuChartColumn, title: "Analytics that move", body: "We record engagement through the day, so you see how a post grows, not just where it ended up." },
+  { Icon: LuCalendarDays, title: "Reliable scheduling", body: "Posts go out on time, retry if a platform is briefly down, and never post twice." },
+  { Icon: LuShieldCheck, title: "Teams and roles", body: "Workspaces per brand or client, with owner, admin, editor and viewer roles. Connected accounts are stored encrypted." },
   { Icon: LuTrendingUp, title: "Trend spotting", body: "Trending topics and formats matched to your niche, with ready-to-approve drafts.", soon: true },
   { Icon: LuImage, title: "Image and video posts", body: "Upload media once and let each platform get the right format and size.", soon: true },
   { Icon: LuMegaphone, title: "Ad boost", body: "Promote your best organic posts with budgets and rules you set.", soon: true },

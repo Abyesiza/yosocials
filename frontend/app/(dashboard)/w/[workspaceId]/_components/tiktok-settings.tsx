@@ -137,7 +137,7 @@ export function TikTokSettings({
                 <Check label="Branded content" hint="You’re promoting another brand or a third party." checked={Boolean(value?.brandedContent)} onChange={(v) => set({ brandedContent: v, ...(v && value?.privacyLevel === "SELF_ONLY" && { privacyLevel: undefined }) })} />
                 {(value?.brandOrganic || value?.brandedContent) ? (
                   <p className="text-xs text-muted-foreground">
-                    Your {video ? "video" : "photo post"} will be labeled “{value?.brandedContent ? "Paid partnership" : "Promotional content"}”.
+                    Your {video ? "video" : "photo post"} will be labelled “{value?.brandedContent ? "Paid partnership" : "Promotional content"}”.
                   </p>
                 ) : (
                   <p className="text-xs font-medium text-warning">Choose at least one.</p>

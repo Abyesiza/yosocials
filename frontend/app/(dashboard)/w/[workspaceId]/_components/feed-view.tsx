@@ -33,7 +33,7 @@ export function FeedView() {
   return (
     <div className="grid gap-8 2xl:grid-cols-[minmax(0,1fr)_22rem]">
       <section aria-label="Published posts" className="min-w-0">
-        <PageHeader eyebrow={workspace?.name} title="Home" subtitle="Everything you've published, across every account." />
+        <PageHeader eyebrow={workspace?.name} title="Home" subtitle="Everything you’ve published, across every account." />
         <AccountStories accounts={accounts} selected={accountId} onSelect={setAccountId} />
         <ErrorNote error={feed.error} />
         {!feed.data && !feed.error && <FeedSkeleton />}
@@ -62,14 +62,14 @@ function EmptyFeed({ hasAccounts, canCreate, canConnect, href }: { hasAccounts: 
       <EmptyState
         title="Nothing published yet"
         body="Posts you publish from Aby Socials show up here with their likes, reposts and replies."
-        action={canCreate && <ButtonLink href={href("/create")}>Create a post</ButtonLink>}
+        action={canCreate && <ButtonLink href={href("/create")}>Create post</ButtonLink>}
       />
     );
   }
   return (
     <EmptyState
       title="Connect your first account"
-      body="Bring in Bluesky, Mastodon, Telegram or Discord to start posting from one place."
+      body="Connect LinkedIn, X, TikTok, Bluesky, Mastodon, Telegram or Discord to post to all of them from one place."
       action={canConnect && <ButtonLink href={href("/accounts")}>Connect an account</ButtonLink>}
     />
   );

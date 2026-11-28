@@ -52,7 +52,7 @@ export class ThrottleGuard implements CanActivate {
     if (hit.count > this.limit) {
       res.setHeader('Retry-After', Math.ceil((hit.resetAt - now) / 1000));
       throw new HttpException(
-        'Too many attempts; wait a minute',
+        'Too many attempts. Wait a minute, then try again.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }

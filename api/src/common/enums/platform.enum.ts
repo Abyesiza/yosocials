@@ -12,4 +12,5 @@ export enum Platform {
   Discord = 'discord',
   TikTok = 'tiktok',
   X = 'x',
+  LinkedIn = 'linkedin',
 }

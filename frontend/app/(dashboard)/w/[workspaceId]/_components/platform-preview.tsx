@@ -42,11 +42,11 @@ export function PlatformPreview({
         <span className={cn("ml-auto text-xs font-semibold tabular-nums", over ? "text-destructive" : "text-muted-foreground")}>
           {n}
           {cap && ` / ${cap.maxTextLength}`}
-          {over && <span className="sr-only"> (too long)</span>}
+          {over && <span className="sr-only"> (over the {label} limit)</span>}
         </span>
       </div>
       {mediaCount > 0 && cap && !cap.media && (
-        <p className="mb-2 text-xs text-muted-foreground">{label} gets the text only; attached media isn’t posted there yet.</p>
+        <p className="mb-2 text-xs text-muted-foreground">We’ll post only the text to {label}. It doesn’t support media from Aby Socials yet.</p>
       )}
       {cap?.media && cap.media.maxImages > 0 && mediaCount > cap.media.maxImages && (
         <p className="mb-2 text-xs font-medium text-warning">{label} takes up to {cap.media.maxImages} photos in a post.</p>
@@ -67,7 +67,7 @@ export function PlatformPreview({
             {text || <span className="text-muted-foreground">Your text will appear here</span>}
           </p>
           <button type="button" onClick={onCustomize} className="mt-2 min-h-11 text-xs font-semibold text-primary hover:underline sm:min-h-0">
-            Customize for {label}
+            Customise for {label}
           </button>
         </>
       )}

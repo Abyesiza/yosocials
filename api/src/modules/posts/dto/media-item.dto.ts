@@ -26,11 +26,15 @@ export class MediaItemDto {
     description: 'UploadThing custom id',
   })
   @IsString()
-  @Matches(MEDIA_PATH_PATTERN, { message: 'media path is not an upload path' })
+  @Matches(MEDIA_PATH_PATTERN, {
+    message: 'Upload the file through Aby Socials, then attach it',
+  })
   path: string;
 
   @ApiProperty({ enum: MEDIA_CONTENT_TYPES })
-  @IsIn(MEDIA_CONTENT_TYPES)
+  @IsIn(MEDIA_CONTENT_TYPES, {
+    message: 'Upload an MP4, MOV or WebM video, or a JPEG or WebP image',
+  })
   contentType: string;
 
   @ApiProperty({ description: 'Bytes' })
@@ -61,9 +65,9 @@ export class UploadFileDto {
 
 export class ReserveUploadsDto {
   @ApiProperty({ type: [UploadFileDto] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(35)
+  @IsArray({ message: 'Choose at least one file to upload' })
+  @ArrayMinSize(1, { message: 'Choose at least one file to upload' })
+  @ArrayMaxSize(35, { message: 'Upload up to 35 files at a time' })
   @ValidateNested({ each: true })
   @Type(() => UploadFileDto)
   files: UploadFileDto[];

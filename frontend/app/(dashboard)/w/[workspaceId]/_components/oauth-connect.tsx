@@ -36,6 +36,19 @@ const SPECS: Partial<Record<Platform, OAuthSpec>> = {
       "You can remove access at any time in X: Settings and privacy → Security and account access → Apps and sessions → Connected apps.",
     ],
   },
+  linkedin: {
+    intro: "Sign in with LinkedIn and approve access. Aby Socials never sees your LinkedIn password.",
+    permissions: [
+      "Read your name and profile picture, so you can tell which account is connected.",
+      "Post text, photos and videos you write or approve in Aby Socials to your LinkedIn profile. Nothing is posted without you.",
+      "Read impressions, reactions, comments and reposts of posts made through Aby Socials, when LinkedIn allows it.",
+    ],
+    notes: [
+      "Aby Socials doesn’t read your feed, connections or messages, and doesn’t react, comment or connect for you.",
+      "LinkedIn asks you to reconnect every 60 days. We’ll show “Needs reconnecting” when it’s time.",
+      "You can remove access at any time in LinkedIn: Settings → Data privacy → Permitted services.",
+    ],
+  },
 };
 
 /** Connects a platform through its own sign-in page (OAuth) instead of pasted credentials. */
@@ -67,7 +80,7 @@ export function OAuthConnect({ platform, available }: { platform: Platform; avai
           Continue with {label} <LuExternalLink className="h-4 w-4" aria-hidden />
         </a>
       ) : (
-        <p className="text-sm text-muted-foreground">{label} isn’t switched on for this server yet. Ask whoever runs Aby Socials to add its app credentials.</p>
+        <p className="text-sm text-muted-foreground">{label} isn’t available here yet. Ask whoever runs Aby Socials to set up the {label} connection.</p>
       )}
     </Card>
   );

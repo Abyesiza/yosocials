@@ -72,7 +72,10 @@ export class WorkspacesService {
 
   async get(workspaceId: string): Promise<Workspace> {
     const workspace = await this.workspaces.findOneBy({ id: workspaceId });
-    if (!workspace) throw new NotFoundException('Workspace not found');
+    if (!workspace)
+      throw new NotFoundException(
+        'We couldn’t find that workspace, or you’re not a member.',
+      );
     return workspace;
   }
 
@@ -117,7 +120,9 @@ export class WorkspacesService {
         userId: user.id,
       })
     ) {
-      throw new ConflictException('That person is already a member');
+      throw new ConflictException(
+        'That person is already a member of this workspace.',
+      );
     }
     await this.members.save(
       this.members.create({
@@ -155,7 +160,9 @@ export class WorkspacesService {
       const member = await this.lockMember(m, ctx.workspaceId, userId);
       if (userId !== ctx.userId) {
         if (!hasRole(ctx.role, WorkspaceRole.Admin)) {
-          throw new ForbiddenException('Only admins can remove other members');
+          throw new ForbiddenException(
+            'Only workspace admins and owners can remove other members.',
+          );
         }
         this.assertCanManage(ctx, member);
       }
@@ -174,7 +181,10 @@ export class WorkspacesService {
       where: { workspaceId, userId },
       relations: { user: true },
     });
-    if (!member) throw new NotFoundException('Member not found');
+    if (!member)
+      throw new NotFoundException(
+        'We couldn’t find that member in this workspace.',
+      );
     return member;
   }
 
@@ -188,7 +198,10 @@ export class WorkspacesService {
       where: { workspaceId, userId },
       lock: { mode: 'pessimistic_write' },
     });
-    if (!member) throw new NotFoundException('Member not found');
+    if (!member)
+      throw new NotFoundException(
+        'We couldn’t find that member in this workspace.',
+      );
     return member;
   }
 
@@ -217,14 +230,18 @@ export class WorkspacesService {
       target.role === WorkspaceRole.Owner &&
       ctx.role !== WorkspaceRole.Owner
     ) {
-      throw new ForbiddenException('Only an owner can change another owner');
+      throw new ForbiddenException(
+        'Only an owner can change or remove another owner.',
+      );
     }
   }
 
   /** You can only hand out roles up to your own; owner needs owner. */
   private assertCanAssign(ctx: WorkspaceContext, role: WorkspaceRole): void {
     if (!hasRole(ctx.role, role)) {
-      throw new ForbiddenException(`You can't grant the ${role} role`);
+      throw new ForbiddenException(
+        'You can’t give someone a role above your own.',
+      );
     }
   }
 }

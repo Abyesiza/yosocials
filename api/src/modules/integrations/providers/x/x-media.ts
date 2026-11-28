@@ -141,16 +141,20 @@ async function download(url: string): Promise<Response> {
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new PlatformApiError(
-      `Couldn’t read the media to send to X: ${reason}`,
+      'We couldn’t load the media to send to X. Try again in a moment.',
       0,
       true,
+      { reason },
     );
   }
   if (!res.ok || !res.body) {
     throw new PlatformApiError(
-      `Couldn’t read the media to send to X (${res.status})`,
+      res.status >= 500
+        ? 'We couldn’t load the media to send to X. Try again in a moment.'
+        : 'We couldn’t find the media to send to X. Attach it to the post again.',
       res.status >= 500 ? 502 : 422,
       res.status >= 500,
+      { status: res.status },
     );
   }
   return res;

@@ -6,6 +6,7 @@ import { DiscordProvider } from './providers/discord/discord.provider.js';
 import { MastodonProvider } from './providers/mastodon/mastodon.provider.js';
 import { TelegramProvider } from './providers/telegram/telegram.provider.js';
 import { TikTokProvider } from './providers/tiktok/tiktok.provider.js';
+import { LinkedInProvider } from './providers/linkedin/linkedin.provider.js';
 import { XProvider } from './providers/x/x.provider.js';
 
 /** Looks up the provider for a platform. The single place providers are listed. */
@@ -20,6 +21,7 @@ export class IntegrationsRegistry {
     discord: DiscordProvider,
     tiktok: TikTokProvider,
     x: XProvider,
+    linkedin: LinkedInProvider,
   ) {
     const list: PlatformProvider[] = [
       bluesky,
@@ -28,6 +30,7 @@ export class IntegrationsRegistry {
       discord,
       tiktok,
       x,
+      linkedin,
     ];
     this.providers = new Map(list.map((p) => [p.platform, p]));
 
@@ -42,7 +45,9 @@ export class IntegrationsRegistry {
   get(platform: Platform): PlatformProvider {
     const provider = this.providers.get(platform);
     if (!provider) {
-      throw new BadRequestException(`Unsupported platform: ${platform}`);
+      throw new BadRequestException(
+        `Aby Socials doesn’t support ${platform} yet.`,
+      );
     }
     return provider;
   }

@@ -31,3 +31,13 @@ When a task depends on how the app behaves in production - an error users hit, a
 
 - The Observe MCP server answers those questions directly: errors with their traces and logs, slow operations, jobs, and what a release changed (`find_regressions`, `diff_release`). It is included on the Pro plan and above. In Claude Code: `claude mcp add observe --transport http https://observe-api.nestjs.com/mcp`, and the client opens a browser to approve. Other clients: https://www.observe.nestjs.com/documentation/mcp
 - Without it, the user can open the request or error in the Observe dashboard and click **Copy agent prompt**, which hands over that page's trace, stack and logs as text.
+
+## Writing user-facing messages
+
+Exception messages, validation messages and provider errors reach people through the web app, so they follow the writing rules in `../frontend/AGENTS.md` (“Writing for Aby Socials”). In short:
+
+- Say what happened, then how to fix it: “Your X connection has expired. Reconnect the account to keep posting.”
+- Plain words, UK spelling, curly apostrophes, the glossary's terms (log in, account, workspace, post, publish). No codes, status numbers, “invalid”, “unauthorized” or internal names (target, provider, DTO fields) in the message.
+- Name the platform when it refused, and pass on its reason in plain words.
+- Keep codes and raw platform bodies for logs and `PlatformApiError.body`, never the message.
+- `class-validator` messages are seen by people: “Enter a valid email address”, not “email must be an email”.

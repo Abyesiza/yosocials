@@ -61,7 +61,9 @@ describe('GeminiLanguageModel', () => {
 
   it('stops at a non-transient error instead of trying other models', async () => {
     generateContent.mockRejectedValueOnce(apiError(400));
-    await expect(model().generateJson(request)).rejects.toThrow(/HTTP 400/);
+    await expect(model().generateJson(request)).rejects.toThrow(
+      /couldn’t answer/,
+    );
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
@@ -84,6 +86,8 @@ describe('GeminiLanguageModel', () => {
 
   it('refuses to run without an API key', async () => {
     const noKey = new GeminiLanguageModel(config({ GEMINI_MODEL: 'm' }));
-    await expect(noKey.generateJson(request)).rejects.toThrow(/GEMINI_API_KEY/);
+    await expect(noKey.generateJson(request)).rejects.toThrow(
+      /aren’t available yet/,
+    );
   });
 });

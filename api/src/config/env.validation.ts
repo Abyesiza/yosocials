@@ -10,6 +10,7 @@ import {
   Max,
   Min,
   MinLength,
+  NotContains,
   validateSync,
 } from 'class-validator';
 
@@ -133,6 +134,40 @@ export class EnvironmentVariables {
       'X_SCOPES must be space-separated OAuth 2.0 scopes, e.g. "tweet.read tweet.write"',
   })
   X_SCOPES = 'tweet.read tweet.write users.read media.write offline.access';
+
+  /** LinkedIn app credentials (linkedin.com/developers → your app → Auth). LinkedIn stays unavailable until all three are set. */
+  @IsOptional()
+  @IsString()
+  LINKEDIN_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  LINKEDIN_CLIENT_SECRET?: string;
+
+  /** Must match an Authorized redirect URL on the LinkedIn app exactly. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  LINKEDIN_REDIRECT_URI?: string;
+
+  /**
+   * Space-separated scopes, each granted by a product on the app: openid and
+   * profile (Sign In with LinkedIn using OpenID Connect), w_member_social
+   * (Share on LinkedIn). Add r_member_postAnalytics once the Community
+   * Management API is approved, to read post analytics.
+   */
+  @Matches(/^[A-Za-z_.]+( [A-Za-z_.]+)*$/, {
+    message:
+      'LINKEDIN_SCOPES must be space-separated, e.g. "openid profile w_member_social"',
+  })
+  @NotContains('r_liteprofile', {
+    message:
+      'LINKEDIN_SCOPES: r_liteprofile and r_emailaddress were retired; use "openid profile"',
+  })
+  LINKEDIN_SCOPES = 'openid profile w_member_social';
+
+  /** LinkedIn API version (YYYYMM). Each version is retired about a year after release. */
+  @Matches(/^\d{6}$/)
+  LINKEDIN_API_VERSION = '202611';
 
   /** UploadThing token (dashboard → API Keys). Media uploads stay off until it's set. */
   @IsOptional()

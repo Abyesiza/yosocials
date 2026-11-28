@@ -10,21 +10,29 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ maxLength: 120 })
   @IsOptional()
   @Transform(trim)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
+  @IsString({ message: 'Enter your name' })
+  @MinLength(1, { message: 'Enter your name' })
+  @MaxLength(120, { message: 'Use 120 characters or fewer for your name' })
   name?: string;
 }
 
 export class ChangePasswordDto {
   @ApiProperty()
-  @IsString()
-  @MaxLength(PASSWORD_MAX)
+  @IsString({ message: 'Enter your current password' })
+  @MaxLength(PASSWORD_MAX, {
+    message: `Use ${PASSWORD_MAX} characters or fewer for your password`,
+  })
   currentPassword: string;
 
   @ApiProperty({ minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX })
-  @IsString()
-  @MinLength(PASSWORD_MIN)
-  @MaxLength(PASSWORD_MAX)
+  @IsString({
+    message: `Use at least ${PASSWORD_MIN} characters for your new password`,
+  })
+  @MinLength(PASSWORD_MIN, {
+    message: `Use at least ${PASSWORD_MIN} characters for your new password`,
+  })
+  @MaxLength(PASSWORD_MAX, {
+    message: `Use ${PASSWORD_MAX} characters or fewer for your new password`,
+  })
   newPassword: string;
 }

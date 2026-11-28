@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         Workspace owners decide who joins and what role they have. Owners and admins are responsible for the accounts they
-        connect and for the people they invite. Members can see and act on that workspace&apos;s content according to their role.
+        connect and for the people they invite. Members can see and act on that workspace’s content according to their role.
       </p>
     ),
   },
@@ -52,7 +52,7 @@ const sections: LegalSection[] = [
         <p>
           When you connect an account, you authorise {LEGAL.product} to act for it as you direct: publishing your posts, reading
           its profile and reading engagement on posts we published. You must have the right to connect each account, and you
-          must follow each platform&apos;s own terms and rules, including its automation and spam policies.
+          must follow each platform’s own terms and rules, including its automation and spam policies.
         </p>
         <p>
           {LEGAL.product} is independent and is not affiliated with, endorsed by or sponsored by any of the platforms it works
@@ -67,8 +67,8 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          When you connect an account from one of these platforms, you also agree to that platform&apos;s terms, and its
-          privacy policy applies to the data it holds. Breaking a platform&apos;s terms through {LEGAL.product} also breaks these terms.
+          When you connect an account from one of these platforms, you also agree to that platform’s terms, and its
+          privacy policy applies to the data it holds. Breaking a platform’s terms through {LEGAL.product} also breaks these terms.
         </p>
         <ul>
           {PLATFORM_POLICIES.map((p) => (
@@ -90,7 +90,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         You keep ownership of everything you create or upload. You give us a limited licence to host, copy, process, adapt (for
-        example to fit a platform&apos;s character limit) and transmit your content, only to provide the service as you direct.
+        example to fit a platform’s character limit) and transmit your content, only to provide the service as you direct.
         You are responsible for your content and for having the rights to publish it.
       </p>
     ),
@@ -114,9 +114,9 @@ const sections: LegalSection[] = [
         <p>You must not use {LEGAL.product} to:</p>
         <ul>
           <li>publish spam, scams, malware, or deceptive or illegal content;</li>
-          <li>harass, threaten or impersonate anyone, or violate anyone&apos;s rights, including privacy and intellectual property;</li>
+          <li>harass, threaten or impersonate anyone, or violate anyone’s rights, including privacy and intellectual property;</li>
           <li>manipulate platforms, for example with fake engagement, coordinated inauthentic behaviour or ban evasion;</li>
-          <li>break any platform&apos;s terms or rate limits, or access accounts you are not authorised to use;</li>
+          <li>break any platform’s terms or rate limits, or access accounts you are not authorised to use;</li>
           <li>probe, scan or test our systems without our written permission, interfere with the service, or reverse engineer it except where the law allows.</li>
         </ul>
       </>
@@ -162,7 +162,7 @@ const sections: LegalSection[] = [
   {
     id: "indemnity",
     title: "Indemnity",
-    body: <p>You agree to cover our reasonable costs from claims caused by your content or your breach of these terms or of a platform&apos;s terms.</p>,
+    body: <p>You agree to cover our reasonable costs from claims caused by your content or your breach of these terms or of a platform’s terms.</p>,
   },
   {
     id: "law",

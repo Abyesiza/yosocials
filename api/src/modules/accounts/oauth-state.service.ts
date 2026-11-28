@@ -61,7 +61,7 @@ export class OAuthStateService {
         : false;
     if (!valid)
       throw new BadRequestException(
-        'The sign-in link is invalid. Start again.',
+        'This sign-in link doesn’t work. Start again.',
       );
 
     const payload = JSON.parse(

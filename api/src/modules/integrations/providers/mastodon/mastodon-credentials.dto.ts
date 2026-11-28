@@ -8,11 +8,23 @@ import { IsString, IsUrl, MinLength } from 'class-validator';
  */
 export class MastodonCredentialsDto {
   @ApiProperty({ example: 'https://mastodon.social' })
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsUrl(
+    { protocols: ['https'], require_protocol: true },
+    {
+      message:
+        'Enter your Mastodon server address, like https://mastodon.social',
+    },
+  )
   instanceUrl: string;
 
   @ApiProperty({ description: 'Access token from the instance' })
-  @IsString()
-  @MinLength(20)
+  @IsString({
+    message:
+      'Paste the access token from Preferences → Development on your Mastodon server',
+  })
+  @MinLength(20, {
+    message:
+      'Paste the access token from Preferences → Development on your Mastodon server',
+  })
   accessToken: string;
 }

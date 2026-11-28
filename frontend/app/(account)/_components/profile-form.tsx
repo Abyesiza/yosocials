@@ -25,13 +25,13 @@ export function ProfileForm({ me }: { me: Me }) {
         <Field label="Name" error={errors.name?.message}>
           <Input autoComplete="name" aria-invalid={Boolean(errors.name)} {...form.register("name")} />
         </Field>
-        <Field label="Email" hint="Email changes aren't supported yet.">
+        <Field label="Email" hint="You can’t change your email yet.">
           <Input value={me.user.email} disabled readOnly />
         </Field>
         <FormError form={form} />
         <div className="flex items-center gap-3">
-          <Button type="submit" variant="outline" loading={isSubmitting} disabled={!isDirty}>Save</Button>
-          {isSubmitSuccessful && !isDirty && <span role="status" className="text-sm text-success">Saved</span>}
+          <Button type="submit" variant="outline" loading={isSubmitting} disabled={!isDirty}>Save changes</Button>
+          {isSubmitSuccessful && !isDirty && <span role="status" className="text-sm text-success">Changes saved</span>}
         </div>
       </form>
     </Card>

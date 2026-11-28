@@ -11,7 +11,10 @@ export class DiscordCredentialsDto {
   })
   @Matches(
     /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d{17,20}\/[\w-]{20,}$/,
-    { message: 'webhookUrl must be a Discord webhook URL' },
+    {
+      message:
+        'Paste a Discord webhook URL, like https://discord.com/api/webhooks/…',
+    },
   )
   webhookUrl: string;
 }

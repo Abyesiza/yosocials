@@ -53,7 +53,7 @@ export function TargetCard({
       {editing ? (
         <div className="space-y-3">
           <Textarea aria-label={`Text for ${platformLabel(account.platform)}`} value={text} onChange={(e) => setText(e.target.value)} rows={5} />
-          <Input type="datetime-local" aria-label="Publish at" value={when} onChange={(e) => setWhen(e.target.value)} className="max-w-xs" />
+          <Input type="datetime-local" aria-label="Publish date and time" value={when} onChange={(e) => setWhen(e.target.value)} className="max-w-xs" />
           {tiktok && (
             <TikTokSettings
               account={account}
@@ -65,7 +65,7 @@ export function TargetCard({
             />
           )}
           <div className="flex gap-2">
-            <Button size="sm" loading={saving} onClick={() => { onSave({ text, scheduledAt: when ? new Date(when).toISOString() : null, ...(tiktok && options?.mode && { options }) }); setEditing(false); }}>Save</Button>
+            <Button size="sm" loading={saving} onClick={() => { onSave({ text, scheduledAt: when ? new Date(when).toISOString() : null, ...(tiktok && options?.mode && { options }) }); setEditing(false); }}>Save changes</Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
           </div>
         </div>
@@ -78,7 +78,7 @@ export function TargetCard({
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        {editable && !editing && <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>}
+        {editable && !editing && <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit post</Button>}
         {target.externalUrl && (
           <a href={target.externalUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground sm:min-h-0">
             View on {platformLabel(account.platform)} <LuExternalLink className="h-3.5 w-3.5" aria-hidden />

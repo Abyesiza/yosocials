@@ -52,25 +52,29 @@ export class MediaStorageService {
   reserve(workspaceId: string, files: UploadRequest[]): string[] {
     if (!this.utapi) {
       throw new ServiceUnavailableException(
-        'Media uploads are not set up yet (UPLOADTHING_TOKEN)',
+        'Media uploads aren’t available yet. Ask whoever runs Aby Socials to finish setting them up.',
       );
     }
     const kinds = files.map((f) => {
       const type = MEDIA_TYPES[f.contentType];
       if (!type)
-        throw new BadRequestException(`${f.contentType} isn't supported`);
+        throw new BadRequestException(
+          'Upload an MP4, MOV or WebM video, or a JPEG or WebP image.',
+        );
       if (f.size > MAX_BYTES[type.kind]) {
         throw new BadRequestException(
-          `${type.kind === 'video' ? 'Videos' : 'Photos'} can be up to ${MAX_BYTES[type.kind] / 1024 / 1024} MB`,
+          `${type.kind === 'video' ? 'Videos' : 'Photos'} can be up to ${MAX_BYTES[type.kind] / 1024 / 1024} MB. Use a smaller file.`,
         );
       }
       return type.kind;
     });
     if (kinds.includes('video') && kinds.length > 1) {
-      throw new BadRequestException('Upload one video, or photos only');
+      throw new BadRequestException(
+        'Upload one video, or photos only. Videos and photos can’t be mixed.',
+      );
     }
     if (kinds.length > MAX_IMAGES) {
-      throw new BadRequestException(`Upload up to ${MAX_IMAGES} photos`);
+      throw new BadRequestException(`Upload up to ${MAX_IMAGES} photos.`);
     }
     return files.map(
       (f) => `${workspaceId}_${randomUUID()}.${MEDIA_TYPES[f.contentType].ext}`,

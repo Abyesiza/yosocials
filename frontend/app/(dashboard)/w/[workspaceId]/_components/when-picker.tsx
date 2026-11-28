@@ -6,7 +6,7 @@ import { toLocalInput } from "@/app/lib/format";
 export type When = "now" | "schedule" | "draft";
 
 const OPTIONS: [When, string][] = [
-  ["now", "Post now"],
+  ["now", "Publish now"],
   ["schedule", "Schedule"],
   ["draft", "Save as draft"],
 ];
@@ -35,7 +35,7 @@ export function WhenPicker({
       {when === "schedule" && (
         <Input
           type="datetime-local"
-          aria-label="Publish at"
+          aria-label="Publish date and time"
           value={scheduledAt}
           min={toLocalInput(new Date())}
           onChange={(e) => onScheduledAt(e.target.value)}

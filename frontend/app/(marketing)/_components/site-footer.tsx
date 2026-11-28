@@ -9,7 +9,7 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 md:flex-row md:items-start md:justify-between lg:px-8">
         <div className="max-w-xs space-y-3">
           <BrandMark />
-          <p className="text-sm text-muted-foreground">The AI agent that plans, posts and tracks your social media.</p>
+          <p className="text-sm text-muted-foreground">AI that plans, publishes and tracks your social media.</p>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
           {NAV_LINKS.map((l) => <a key={l.href} href={l.href} className="min-h-8 text-muted-foreground hover:text-foreground">{l.label}</a>)}

@@ -47,7 +47,7 @@ export function AnalyticsView() {
       {!data && !error && (
         <div className="space-y-8"><StatTilesSkeleton /><RowsSkeleton /></div>
       )}
-      {data && data.totals.posts === 0 && <EmptyState title="No published posts in this range" body="Numbers appear once posts go out. They refresh every 15 minutes." />}
+      {data && data.totals.posts === 0 && <EmptyState title="No published posts in this range" body="Analytics appear once posts are published. We update them every 30 minutes, or every 6 hours on X." />}
       {data && data.totals.posts > 0 && <Report data={data} />}
     </div>
   );

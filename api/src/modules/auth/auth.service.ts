@@ -17,7 +17,7 @@ import type { Workspace } from '../workspaces/entities/workspace.entity.js';
 import { WorkspacesService } from '../workspaces/workspaces.service.js';
 import type { AuthTokensDto, SignInDto, SignUpDto } from './dto/auth.dto.js';
 
-const INVALID_CREDENTIALS = 'Incorrect email or password';
+const INVALID_CREDENTIALS = 'That email or password doesn’t match. Try again.';
 
 @Injectable()
 export class AuthService {
@@ -75,7 +75,7 @@ export class AuthService {
     } catch (error) {
       if (error instanceof RefreshTokenError) {
         throw new UnauthorizedException(
-          'Session expired. Please sign in again.',
+          'Your session has expired. Log in again.',
         );
       }
       throw error;
@@ -97,7 +97,9 @@ export class AuthService {
     if (!(await this.hasher.verify(currentPassword, hash))) {
       // 400, not 401: the session is fine, only the typed password is wrong,
       // and clients treat 401 as "signed out".
-      throw new BadRequestException('Current password is incorrect');
+      throw new BadRequestException(
+        'Your current password doesn’t match. Try again.',
+      );
     }
     await this.users.setPasswordHash(
       userId,

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { setSessionCookies, type TokenPair } from "./session";
 
 /** Platforms that connect through their own sign-in page. */
-export const OAUTH_PLATFORMS = ["tiktok", "x"] as const;
+export const OAUTH_PLATFORMS = ["tiktok", "x", "linkedin"] as const;
 export type OAuthPlatform = (typeof OAUTH_PLATFORMS)[number];
 
 export const isOAuthPlatform = (p: string): p is OAuthPlatform =>
@@ -40,7 +40,7 @@ export function accountsPage(workspaceId: string, params: Record<string, string>
 
 /** Nest sends `message` as a string, or a list for validation errors. */
 export async function apiMessage(res: Response | null, fallback: string): Promise<string> {
-  if (!res) return "The Aby Socials API is not reachable. Try again.";
+  if (!res) return "We couldn’t reach our server. Try again in a moment.";
   const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
   const m = body?.message;
   if (Array.isArray(m)) return m.join(" ");

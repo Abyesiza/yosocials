@@ -26,7 +26,9 @@ export class TikTokOptionsDto {
     description:
       'direct: publish to the profile (video.publish). inbox: send as a draft the creator finishes in TikTok (video.upload).',
   })
-  @IsIn(['direct', 'inbox'])
+  @IsIn(['direct', 'inbox'], {
+    message: 'Choose whether to post directly or send to the TikTok inbox',
+  })
   mode: 'direct' | 'inbox';
 
   @ApiPropertyOptional({
@@ -34,7 +36,7 @@ export class TikTokOptionsDto {
     description: 'Required for direct posts',
   })
   @IsOptional()
-  @IsIn(TIKTOK_PRIVACY_LEVELS)
+  @IsIn(TIKTOK_PRIVACY_LEVELS, { message: 'Choose who can see this post' })
   privacyLevel?: TikTokPrivacyLevel;
 
   @ApiPropertyOptional() @IsOptional() @IsBoolean() allowComment?: boolean;
@@ -66,8 +68,8 @@ export class TikTokOptionsDto {
     description: 'Photo posts only; the post text becomes the description',
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(90)
+  @IsString({ message: 'Use 90 characters or fewer for the photo title' })
+  @MaxLength(90, { message: 'Use 90 characters or fewer for the photo title' })
   photoTitle?: string;
 
   @ApiPropertyOptional({ description: 'Photo posts only' })

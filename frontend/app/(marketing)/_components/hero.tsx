@@ -8,12 +8,12 @@ export function Hero() {
     <section className="hero-glow relative overflow-hidden">
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 pt-16 sm:px-6 md:pt-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:px-8 lg:pb-28">
         <div className="step-text-in">
-          <p className="text-sm font-semibold uppercase tracking-wider text-[#93c5fd]">AI social media agent</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-[#93c5fd]">Social media, planned with AI</p>
           <h1 className="mt-4 text-4xl font-bold leading-[1.08] tracking-tight text-white md:text-6xl lg:text-7xl">
             Plan, post and grow on <span className="gradient-text">every platform</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">
-            Aby Socials drafts a content calendar for each of your accounts, publishes on time and shows how every post performs. One home for every channel you run.
+            Aby Socials drafts a content calendar for each of your accounts, publishes on time and shows how every post performs. One home for every account you run.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <PillButton href="/signup" className="h-12 px-7 text-base">Get started free</PillButton>

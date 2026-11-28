@@ -23,7 +23,9 @@ export class UsersService {
   ): Promise<User> {
     const email = normalizeEmail(input.email);
     if (await manager.existsBy(User, { email })) {
-      throw new ConflictException('An account with this email already exists');
+      throw new ConflictException(
+        'An Aby Socials account already uses this email. Log in instead.',
+      );
     }
     return manager.save(
       manager.create(User, { ...input, email, lastSignInAt: null }),
@@ -36,7 +38,10 @@ export class UsersService {
 
   async findByIdOrFail(id: string): Promise<User> {
     const user = await this.findById(id);
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new NotFoundException(
+        'We couldn’t find your Aby Socials account. Log in again.',
+      );
     return user;
   }
 

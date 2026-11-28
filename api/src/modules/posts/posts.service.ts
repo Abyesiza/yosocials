@@ -62,7 +62,7 @@ export class PostsService {
     const accountIds = dto.targets.map((t) => t.accountId);
     if (new Set(accountIds).size !== accountIds.length) {
       throw new BadRequestException(
-        'Each account can only be targeted once per post',
+        'Each account can appear only once in a post. Remove the extra one.',
       );
     }
     // Also proves every account belongs to this workspace.
@@ -148,7 +148,10 @@ export class PostsService {
       where: { id, workspaceId },
       relations: { targets: { account: true } },
     });
-    if (!post) throw new NotFoundException(`Post ${id} not found`);
+    if (!post)
+      throw new NotFoundException(
+        'We couldn’t find that post in this workspace.',
+      );
     return post;
   }
 
@@ -195,7 +198,7 @@ export class PostsService {
     const target = this.getTarget(post, targetId);
     if (!EDITABLE_STATUSES.includes(target.status)) {
       throw new ConflictException(
-        `Target is ${target.status} and can't be edited`,
+        `The ${this.registry.get(target.account.platform).displayName} version is ${target.status === TargetStatus.Published ? 'already published' : 'being published'} and can’t be edited.`,
       );
     }
     if (dto.text !== undefined) target.text = dto.text;
@@ -234,18 +237,22 @@ export class PostsService {
       : post.targets.filter((t) => t.status === TargetStatus.Draft);
 
     if (chosen.length === 0) {
-      throw new BadRequestException('No draft targets to schedule');
+      throw new BadRequestException(
+        'There are no drafts in this post to schedule.',
+      );
     }
     for (const target of chosen) {
       if (
         target.status !== TargetStatus.Draft &&
         target.status !== TargetStatus.Failed
       ) {
-        throw new ConflictException(`Target ${target.id} is ${target.status}`);
+        throw new ConflictException(
+          `${target.account.handle} on ${this.registry.get(target.account.platform).displayName} is already ${target.status}. Only drafts and failed posts can be scheduled.`,
+        );
       }
       if (!target.scheduledAt) {
         throw new BadRequestException(
-          `Target ${target.id} (${target.account.platform}) has no scheduledAt`,
+          `Choose a time for ${target.account.handle} on ${this.registry.get(target.account.platform).displayName} before you schedule it.`,
         );
       }
     }
@@ -312,7 +319,7 @@ export class PostsService {
         provider.readinessIssues?.(this.publishInput(post, target)) ?? []
       ).map(
         (issue) =>
-          `${provider.displayName} (${target.account.handle}): ${issue}`,
+          `To post to ${target.account.handle} on ${provider.displayName}, ${issue}`,
       );
     });
     if (problems.length > 0) throw new BadRequestException(problems);
@@ -334,7 +341,7 @@ export class PostsService {
     const { capabilities, displayName } = this.registry.get(account.platform);
     const length = textLength(text, capabilities.lengthUnit);
     return length > capabilities.maxTextLength
-      ? `${displayName} (${account.handle}) allows ${capabilities.maxTextLength} ${capabilities.lengthUnit}; this text has ${length}`
+      ? `${displayName} allows ${capabilities.maxTextLength} characters; the text for ${account.handle} has ${length}. Shorten it or edit the ${displayName} version.`
       : null;
   }
 
@@ -346,7 +353,7 @@ export class PostsService {
     const provider = this.registry.get(account.platform);
     if (!provider.parseTargetOptions) {
       throw new BadRequestException(
-        `${provider.displayName} has no extra post settings`,
+        `${provider.displayName} posts don’t have extra settings.`,
       );
     }
     return provider.parseTargetOptions(raw);
@@ -357,7 +364,7 @@ export class PostsService {
     const media = items.map((m): PostMedia => {
       if (!m.path.startsWith(`${workspaceId}_`)) {
         throw new BadRequestException(
-          'Media must be uploaded to this workspace',
+          'That file belongs to another workspace. Upload it here, then attach it.',
         );
       }
       const kind = MEDIA_TYPES[m.contentType].kind;
@@ -370,7 +377,9 @@ export class PostsService {
       };
     });
     if (new Set(media.map((m) => m.path)).size !== media.length) {
-      throw new BadRequestException('The same file is attached twice');
+      throw new BadRequestException(
+        'The same file is attached twice. Remove one copy.',
+      );
     }
     const videos = media.filter((m) => m.kind === 'video').length;
     if (videos > 0 && media.length > 1) {
@@ -389,7 +398,7 @@ export class PostsService {
     const target = post.targets.find((t) => t.id === targetId);
     if (!target) {
       throw new NotFoundException(
-        `Target ${targetId} not found on post ${post.id}`,
+        'We couldn’t find that account’s version of this post. Refresh the page and try again.',
       );
     }
     return target;
@@ -397,7 +406,9 @@ export class PostsService {
 
   private assertNotPublishing(post: Post): void {
     if (post.targets.some((t) => t.status === TargetStatus.Publishing)) {
-      throw new ConflictException('This post is being published right now');
+      throw new ConflictException(
+        'This post is being published right now. Wait until it finishes, then try again.',
+      );
     }
   }
 }

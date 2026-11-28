@@ -17,7 +17,7 @@ export function Badge({ variant = "secondary", children }: { variant?: BadgeVari
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-semibold tracking-wide capitalize",
+        "inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-semibold tracking-wide",
         VARIANTS[variant],
       )}
     >
@@ -37,5 +37,6 @@ const STATUS: Record<PostStatus | TargetStatus, BadgeVariant> = {
 };
 
 export function StatusBadge({ status }: { status: PostStatus | TargetStatus }) {
-  return <Badge variant={STATUS[status]}>{status.replace("_", " ")}</Badge>;
+  const label = status.replace("_", " ");
+  return <Badge variant={STATUS[status]}>{label[0].toUpperCase() + label.slice(1)}</Badge>;
 }

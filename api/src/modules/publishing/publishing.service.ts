@@ -77,7 +77,7 @@ export class PublishingService {
       .set({
         status: TargetStatus.Failed,
         lastError:
-          'Publishing was interrupted. Check the platform before retrying, it may already be live.',
+          'Publishing was interrupted. It may already be live, so check the platform before you try again.',
       })
       .where('status = :status', { status: TargetStatus.Publishing })
       .andWhere(`"updatedAt" < now() - make_interval(mins => :mins)`, {
@@ -151,12 +151,12 @@ export class PublishingService {
         // Delivered; the creator never posted it from the app, or posted it privately.
         await this.targets.update(target.id, {
           status: TargetStatus.Published,
-          lastError: `Delivered to the ${provider.displayName} inbox; we couldn't confirm it was posted.`,
+          lastError: `Sent to the ${provider.displayName} inbox, but we couldn’t confirm it was posted.`,
         });
         return done(TargetStatus.Published);
       }
       if (expired) {
-        const reason = `${provider.displayName} didn't finish processing within ${PROCESSING_WINDOW_DAYS} days`;
+        const reason = `${provider.displayName} didn’t finish processing this post within ${PROCESSING_WINDOW_DAYS} days. Try publishing it again.`;
         await this.targets.update(target.id, {
           status: TargetStatus.Failed,
           lastError: reason,
@@ -218,7 +218,7 @@ export class PublishingService {
     if (account.status === AccountStatus.NeedsReconnect) {
       return this.fail(
         target,
-        `${account.handle} needs to be reconnected`,
+        `${account.handle} needs to be reconnected. Reconnect the account, then publish again.`,
         false,
       );
     }

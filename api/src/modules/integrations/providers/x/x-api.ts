@@ -32,7 +32,7 @@ interface XTokens {
 }
 
 const RECONNECT =
-  'X access has expired or was removed. Reconnect the X account.';
+  'Your X connection has expired or was removed. Reconnect the account to keep posting.';
 
 type CallInit = Pick<
   RequestOptions,
@@ -97,7 +97,11 @@ export class XApi {
       {},
     );
     if (!data)
-      throw new PlatformApiError('X didn’t return the account', 502, true);
+      throw new PlatformApiError(
+        'X didn’t tell us which account signed in. Try connecting again.',
+        502,
+        true,
+      );
     await this.store(data.id, res);
     return data.id;
   }
@@ -185,7 +189,11 @@ export class XApi {
       form,
     });
     if (!res?.access_token) {
-      throw new PlatformApiError('X rejected the sign-in', 400, false);
+      throw new PlatformApiError(
+        'The sign-in didn’t finish. Start again.',
+        400,
+        false,
+      );
     }
     return res;
   }
@@ -221,7 +229,7 @@ export class XApi {
       return new PlatformApiError(RECONNECT, 401, false, problem);
     if (status === 402 || /credit/i.test(type)) {
       return new PlatformApiError(
-        'Aby Socials’ X API credits have run out. Ask whoever runs Aby Socials to top them up.',
+        'Aby Socials has run out of X credits. Ask whoever runs Aby Socials to top them up.',
         402,
         false,
         problem,
@@ -229,7 +237,7 @@ export class XApi {
     }
     if (status === 429 || type.endsWith('/usage-capped')) {
       return new PlatformApiError(
-        'X is limiting how often Aby Socials can post or read right now. Trying again shortly.',
+        'X is limiting how often Aby Socials can post or read right now. We’ll try again shortly.',
         429,
         true,
         problem,
@@ -238,14 +246,18 @@ export class XApi {
     // X answers 403, but the account is fine: 409 keeps it from being flagged for reconnecting.
     if (/duplicate/i.test(detail)) {
       return new PlatformApiError(
-        'X rejected this as a duplicate of a recent post from this account. Change the text and try again.',
+        'X refused this because it’s a duplicate of a recent post from this account. Change the text and try again.',
         409,
         false,
         problem,
       );
     }
     return new PlatformApiError(
-      detail ? `X: ${detail}` : `X responded ${status}`,
+      detail
+        ? `X refused this: ${detail}`
+        : status >= 500
+          ? 'X is having problems right now. Try again in a moment.'
+          : 'X refused this. Try again, or reconnect the account if it keeps happening.',
       status,
       status >= 500,
       problem,
@@ -267,9 +279,10 @@ export class XApi {
   private app() {
     if (!this.clientId || !this.clientSecret || !this.redirectUri) {
       throw new PlatformApiError(
-        'X isn’t set up yet (X_CLIENT_ID, X_CLIENT_SECRET and X_REDIRECT_URI)',
+        'X isn’t available yet. Ask whoever runs Aby Socials to finish setting it up.',
         503,
         false,
+        { missing: ['X_CLIENT_ID', 'X_CLIENT_SECRET', 'X_REDIRECT_URI'] },
       );
     }
     return {

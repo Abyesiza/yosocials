@@ -45,7 +45,9 @@ export class ConnectAccountDto {
   @ApiPropertyOptional({ maxLength: 2000 })
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(2000, {
+    message: 'Keep the voice description to 2,000 characters or fewer',
+  })
   voice?: string;
 }
 

@@ -3,7 +3,7 @@
  * api/src/modules/*\/dto). Keep in sync when a DTO changes.
  */
 
-export type Platform = "bluesky" | "mastodon" | "telegram" | "discord" | "tiktok" | "x";
+export type Platform = "bluesky" | "mastodon" | "telegram" | "discord" | "tiktok" | "x" | "linkedin";
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer";
 export type AccountPersona = "individual" | "influencer" | "company";
 export type AccountStatus = "active" | "needs_reconnect";

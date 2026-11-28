@@ -13,12 +13,12 @@ type Context = { params: Promise<{ path: string[] }> };
 
 async function handle(request: NextRequest, { params }: Context) {
   if (!isSameOrigin(request)) {
-    return NextResponse.json({ message: "Cross-site request refused" }, { status: 403 });
+    return NextResponse.json({ message: "We couldn’t check where this request came from. Reload the page and try again." }, { status: 403 });
   }
 
   const { path } = await params;
   if (path[0] === "auth") {
-    return NextResponse.json({ message: "Not found" }, { status: 404 });
+    return NextResponse.json({ message: "We couldn’t find that page." }, { status: 404 });
   }
   const body =
     request.method === "GET" || request.method === "HEAD"
@@ -39,7 +39,7 @@ async function handle(request: NextRequest, { params }: Context) {
   if (signedOut) return unauthorized();
   if (!upstream) {
     return NextResponse.json(
-      { message: "The Aby Socials API is not reachable" },
+      { message: "We couldn’t reach our server. Try again in a moment." },
       { status: 502 },
     );
   }
@@ -76,7 +76,7 @@ async function handle(request: NextRequest, { params }: Context) {
 
 function unauthorized() {
   const res = NextResponse.json(
-    { message: "Your session has ended. Please sign in again." },
+    { message: "Your session has ended. Log in again to continue." },
     { status: 401 },
   );
   clearSessionCookies(res);

@@ -168,7 +168,15 @@ describe('Aby Socials API', () => {
     const res = await http.get('/api/integrations').expect(200);
     expect(
       res.body.map((p: { platform: string }) => p.platform).sort(),
-    ).toEqual(['bluesky', 'discord', 'mastodon', 'telegram', 'tiktok', 'x']);
+    ).toEqual([
+      'bluesky',
+      'discord',
+      'linkedin',
+      'mastodon',
+      'telegram',
+      'tiktok',
+      'x',
+    ]);
   });
 
   it('connects accounts, never returning or storing plaintext credentials', async () => {
@@ -223,7 +231,7 @@ describe('Aby Socials API', () => {
       .expect(400);
     expect(res.body.message).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('webhookUrl must be a Discord webhook URL'),
+        expect.stringContaining('Paste a Discord webhook URL'),
       ]),
     );
   });
@@ -234,7 +242,7 @@ describe('Aby Socials API', () => {
       .send({ body: 'x'.repeat(301), targets: [{ accountId: blueskyId }] })
       .expect(400);
     expect(res.body.message[0]).toContain(
-      'Bluesky (yo.bsky.social) allows 300 graphemes',
+      'Bluesky allows 300 characters; the text for yo.bsky.social has 301',
     );
   });
 
@@ -425,7 +433,7 @@ describe('Aby Socials API', () => {
     expect(plan.body.posts[0].targets).toHaveLength(1);
     expect(plan.body.skipped).toHaveLength(2);
     expect(plan.body.skipped.join('\n')).toMatch(
-      /allows 300 graphemes[\s\S]*outside the window/,
+      /allows 300 characters[\s\S]*outside the dates/,
     );
 
     const prompt = t.model.generateJson.mock.calls[0][0].prompt as string;
@@ -476,7 +484,7 @@ describe('Aby Socials API', () => {
       })
       .expect(200);
     expect(plan.body.posts).toHaveLength(0);
-    expect(plan.body.skipped[0]).toMatch(/outside the window/);
+    expect(plan.body.skipped[0]).toMatch(/outside the dates/);
     expect(t.model.generateJson.mock.lastCall?.[0].system).toMatch(
       /Never make up a link/,
     );

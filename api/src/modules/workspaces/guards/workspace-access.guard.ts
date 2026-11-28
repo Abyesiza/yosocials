@@ -38,18 +38,23 @@ export class WorkspaceAccessGuard implements CanActivate {
     }>();
     const workspaceId = request.params.workspaceId;
     if (!workspaceId || !isUUID(workspaceId)) {
-      throw new NotFoundException('Workspace not found');
+      throw new NotFoundException(
+        'We couldn’t find that workspace, or you’re not a member.',
+      );
     }
 
     // AuthenticationContext only opens around the handler (it's an
     // interceptor), so guards read the user the auth guard put on the request.
     const user = request.user;
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new UnauthorizedException('Log in to continue.');
     const membership = await this.workspaces.findMembership(
       workspaceId,
       user.id,
     );
-    if (!membership) throw new NotFoundException('Workspace not found');
+    if (!membership)
+      throw new NotFoundException(
+        'We couldn’t find that workspace, or you’re not a member.',
+      );
 
     const required =
       this.reflector.getAllAndOverride<WorkspaceRole | undefined>(
@@ -57,7 +62,9 @@ export class WorkspaceAccessGuard implements CanActivate {
         [context.getHandler(), context.getClass()],
       ) ?? WorkspaceRole.Viewer;
     if (!hasRole(membership.role, required)) {
-      throw new ForbiddenException(`This needs the ${required} role or higher`);
+      throw new ForbiddenException(
+        `You need the ${required} role in this workspace to do that. Ask a workspace admin.`,
+      );
     }
 
     request[WORKSPACE_CONTEXT] = {

@@ -88,15 +88,15 @@ export class AgentService {
         const ctx = byId.get(t.accountId);
         const when = new Date(t.scheduledAt);
         const reason = !ctx
-          ? 'unknown account'
+          ? 'the AI picked an account that isn’t in this plan'
           : seen.has(t.accountId)
-            ? 'duplicate account'
+            ? 'the AI suggested this account twice'
             : when < start || when > end
-              ? `time ${t.scheduledAt} is outside the window`
+              ? 'the suggested time is outside the dates you chose'
               : this.posts.textLengthIssue(t.text, ctx.account);
         if (reason) {
           skipped.push(
-            `"${planned.title}" → ${ctx?.platformName ?? t.accountId}: ${reason}`,
+            `“${planned.title}” for ${ctx?.platformName ?? 'an account'}: ${reason}`,
           );
           return false;
         }
@@ -181,7 +181,7 @@ export class AgentService {
     if (errors.length > 0) {
       this.logger.warn(`Model output failed validation: ${errors.toString()}`);
       throw new BadGatewayException(
-        'The model returned output in an unexpected shape. Try again.',
+        'Our AI gave an answer we couldn’t use. Try again.',
       );
     }
     return instance;

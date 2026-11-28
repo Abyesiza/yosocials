@@ -36,7 +36,7 @@ function DangerZone() {
   if (!can("owner") || !workspace) return null;
 
   async function remove() {
-    if (prompt(`Type the workspace name to delete it: ${workspace!.name}`) !== workspace!.name) return;
+    if (prompt(`Deleting “${workspace!.name}” removes its connected accounts, posts and analytics from Aby Socials. Posts already published stay live. This can’t be undone.\n\nType the workspace name to confirm:`) !== workspace!.name) return;
     setPending(true);
     setError(null);
     try {
@@ -52,7 +52,7 @@ function DangerZone() {
   return (
     <Card className="space-y-3 border-destructive/40 p-5">
       <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
-      <p className="text-sm text-muted-foreground">Delete this workspace with its accounts, posts and analytics. Posts already published stay live.</p>
+      <p className="text-sm text-muted-foreground">Delete this workspace with its connected accounts, posts and analytics. Posts already published stay live. This can’t be undone.</p>
       <ErrorNote error={error} />
       <Button variant="destructive" loading={pending} onClick={remove}>Delete workspace</Button>
     </Card>

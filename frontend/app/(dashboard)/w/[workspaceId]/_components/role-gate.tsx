@@ -20,8 +20,8 @@ export function RoleGate({
   if (!can(role)) {
     return (
       <EmptyState
-        title={`This needs the ${role} role`}
-        body="Ask an admin of this workspace to change your role."
+        title={`You need the ${role} role for this page`}
+        body="Ask a workspace admin to change your role."
       />
     );
   }

@@ -94,6 +94,7 @@ Target lifecycle: `draft → scheduled → publishing → published | failed`. P
 | Discord | channel webhook URL | reaction count |
 | TikTok | OAuth sign-in (“Continue with TikTok”); needs a video or photos | views, likes, comments, shares |
 | X | OAuth 2.0 sign-in with PKCE (“Continue with X”); text, up to 4 photos or 1 video | impressions (as views), likes, reposts, replies, quotes |
+| LinkedIn | OAuth sign-in (“Continue with LinkedIn”) to a member profile; text, up to 20 photos or 1 MP4 video | impressions (as views), reactions, comments, reposts, once `r_member_postAnalytics` is approved |
 
 ### Bluesky
 
@@ -123,6 +124,16 @@ Built on the X API v2, following [api.x.com/2/openapi.json](https://api.x.com/2/
 - **Posting:** `POST /2/tweets`. X can't pull media from a URL, so files are read from `MEDIA_PUBLIC_BASE_URL` and uploaded: photos with one `POST /2/media/upload` (5 MB limit), videos streamed in 4 MB chunks (`initialize` → `append` → `finalize`), then polled until processed (up to 5 minutes). Text is limited to 280 in X's weighted count (`common/text/text-length.ts`: links 23, emoji and CJK 2). Duplicate-content rejections fail the post without flagging the account for reconnecting.
 - **Metrics:** `GET /2/tweets` in batches of 100 with `public_metrics,non_public_metrics,organic_metrics` (private metrics cover our own posts from the last 30 days, matching the tracking window). Impressions are stored as views; the private counters (link and profile clicks) stay in the snapshot's `raw`.
 - **Cost:** X bills every request from prepaid credits (posts with links cost more), so X metrics are read every 6 hours (`metricsIntervalMinutes`) instead of every 30 minutes. Set a spending limit in the developer console.
+
+### LinkedIn
+
+Built on the [Posts, Images and Videos APIs](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api) (versioned `/rest` endpoints) and [Sign In with LinkedIn using OpenID Connect](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2).
+
+- **Setup:** on the LinkedIn app, add the products *Sign In with LinkedIn using OpenID Connect* (`openid`, `profile`) and *Share on LinkedIn* (`w_member_social`), and register `LINKEDIN_REDIRECT_URI` under Auth → Authorized redirect URLs. `LINKEDIN_SCOPES` defaults to `openid profile w_member_social`; the old `r_liteprofile`/`r_emailaddress` scopes are retired and rejected at startup. `LINKEDIN_API_VERSION` (`YYYYMM`, default `202611`) goes in the `LinkedIn-Version` header; LinkedIn retires each version about a year after release, so bump it yearly.
+- **Connecting:** the same signed-state flow as TikTok (web apps use the client secret, not PKCE). `/v2/userinfo` gives the member id (`sub`, so the author is `urn:li:person:<sub>`), name and picture; OpenID Connect has no vanity URL, so accounts have no profile link. Tokens are stored encrypted under `linkedin:<sub>`.
+- **Tokens:** access tokens last 60 days. Self-serve apps get no refresh token, so when one expires the account is marked “Needs reconnecting” and the member connects again (LinkedIn skips the consent screen if they're still signed in). Apps approved for programmatic refresh get a refresh token, which is used under the session lock; it doesn't rotate and keeps its original one-year expiry. LinkedIn has no revoke endpoint for this flow, so disconnecting forgets the token and members remove access under Settings → Data privacy → Permitted services.
+- **Posting:** `POST /rest/posts`; the post URN comes back in `x-restli-id` and links to `linkedin.com/feed/update/<urn>/`. Text is converted to LinkedIn's “little” format (`linkedin-text.ts`): reserved characters are escaped, hashtags kept. Photos (JPEG, PNG, GIF; no WebP) and videos (MP4, up to 500 MB, 3 seconds to 30 minutes) are read from `MEDIA_PUBLIC_BASE_URL` and PUT to LinkedIn's signed upload URLs; two or more photos make a multi-image post. Videos stream in the 4 MB parts LinkedIn asks for, are finalized with the parts' ETags, and are waited on (up to 4 minutes) where the token may read them.
+- **Analytics:** `memberCreatorPostAnalytics` needs `r_member_postAnalytics`, part of the Community Management API, which LinkedIn must approve. Until the scope is approved and added to `LINKEDIN_SCOPES` (members then reconnect), LinkedIn posts show no metrics. With it, each post costs 4 calls (impressions, reactions, comments, reposts), so they're read every 6 hours. Company Page posting (`w_organization_social`) is also Community Management API only.
 
 To add a platform: add it to `common/enums/platform.enum.ts`, implement `PlatformProvider` in `modules/integrations/providers/<name>/`, and register it in `integrations.module.ts` and `integrations.registry.ts`. Then run `npm run migration:generate src/database/migrations/Add<Name>` to update the enum, and add the migration to `database/migrations/index.ts`.
 

@@ -48,7 +48,7 @@ export async function inspect(file: File): Promise<MediaInfo> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const track = await input.getPrimaryVideoTrack();
-    if (!track) throw new Error(`${file.name} has no video in it.`);
+    if (!track) throw new Error(`We couldn’t find a video in ${file.name}. Choose another file.`);
     const width = track.displayWidth;
     const height = track.displayHeight;
     const durationSec = await input.computeDuration();

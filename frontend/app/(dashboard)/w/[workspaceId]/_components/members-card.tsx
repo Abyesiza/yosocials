@@ -39,7 +39,7 @@ export function MembersCard() {
   }
 
   async function remove(m: Member, isMe: boolean) {
-    if (!confirm(isMe ? `Leave ${workspace?.name}?` : `Remove ${m.name} from ${workspace?.name}?`)) return;
+    if (!confirm(isMe ? `Leave ${workspace?.name}? You’ll lose access to its posts and accounts until someone adds you again.` : `Remove ${m.name} from ${workspace?.name}? They’ll lose access to its posts and accounts.`)) return;
     if (!(await run(`remove-${m.userId}`, () => api(`${base}/members/${m.userId}`, { method: "DELETE" })))) return;
     if (!isMe) return void members.mutate();
     await mutateGlobal("/me");
@@ -73,7 +73,7 @@ export function MembersCard() {
                   <span className="text-xs font-semibold capitalize text-muted-foreground">{m.role}</span>
                 )}
                 {(manageable || isMe) && (
-                  <Button size="sm" variant="destructive-ghost" loading={busy === `remove-${m.userId}`} onClick={() => remove(m, isMe)}>{isMe ? "Leave" : "Remove"}</Button>
+                  <Button size="sm" variant="destructive-ghost" loading={busy === `remove-${m.userId}`} onClick={() => remove(m, isMe)}>{isMe ? "Leave workspace" : "Remove member"}</Button>
                 )}
               </li>
             );

@@ -43,15 +43,15 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
     const kinds = files.map((f) => TYPES[f.type]);
     if (kinds.some((k) => !k)) return setError(new Error("Use MP4, MOV or WebM videos, or JPEG, PNG or WebP photos."));
     const all = [...media.map((m) => m.kind), ...kinds];
-    if (all.includes("video") && all.length > 1) return setError(new Error("Attach one video, or photos only. Videos and photos can’t be mixed."));
-    if (all.length > MAX_IMAGES) return setError(new Error(`Attach up to ${MAX_IMAGES} photos.`));
+    if (all.includes("video") && all.length > 1) return setError(new Error("Add 1 video or some photos. A post can’t have both."));
+    if (all.length > MAX_IMAGES) return setError(new Error(`You can add up to ${MAX_IMAGES} photos to a post.`));
     setChecking(true);
     try {
       const items = await Promise.all(files.map(async (file) => ({ file, info: await inspect(file), preview: URL.createObjectURL(file) })));
       setFraming(items.every((i) => suggestFraming(i.info) === "original") ? "original" : "fit");
       setPending(items);
     } catch (e) {
-      setError(e instanceof Error ? e : new Error("That file couldn’t be read. Try another one."));
+      setError(e instanceof Error ? e : new Error("We couldn’t read that file. Try another one."));
     } finally {
       setChecking(false);
     }
@@ -108,7 +108,7 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">Media</p>
-          <p className="text-xs text-muted-foreground">One video (MP4, MOV, WebM) or up to {MAX_IMAGES} photos (JPEG, PNG, WebP), formatted for TikTok before upload.</p>
+          <p className="text-xs text-muted-foreground">1 video (MP4, MOV, WebM) or up to {MAX_IMAGES} photos (JPEG, PNG, WebP). Some platforms take fewer photos or fewer formats; we check before you post.</p>
         </div>
         <input
           ref={input}
@@ -152,7 +152,7 @@ export function MediaPicker({ media, onChange, disabled }: { media: DraftMedia[]
               {!disabled && (
                 <button
                   type="button"
-                  aria-label="Remove"
+                  aria-label={m.kind === "video" ? "Remove video" : "Remove photo"}
                   onClick={() => onChange(media.filter((x) => x.path !== m.path))}
                   className={cn("absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white", focusRing)}
                 >

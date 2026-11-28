@@ -60,7 +60,7 @@ export class GeminiLanguageModel implements LanguageModel {
   async generateJson(request: StructuredGenerationRequest): Promise<unknown> {
     if (!this.client) {
       throw new ServiceUnavailableException(
-        'The agent is not configured: set GEMINI_API_KEY',
+        'AI features aren’t available yet. Ask whoever runs Aby Socials to finish setting them up.',
       );
     }
 
@@ -79,16 +79,17 @@ export class GeminiLanguageModel implements LanguageModel {
 
     if (lastError instanceof AttemptTimeout) {
       throw new GatewayTimeoutException(
-        'The AI model is too slow to answer right now. Try again shortly.',
+        'Our AI is taking too long to answer right now. Try again shortly.',
       );
     }
     if (this.isTransient(lastError)) {
       throw new ServiceUnavailableException(
-        'The AI models are overloaded right now. Try again shortly.',
+        'Our AI is busy right now. Try again shortly.',
       );
     }
+    this.logger.warn(`Gemini request failed: ${this.describe(lastError)}`);
     throw new BadGatewayException(
-      `Gemini request failed: ${this.describe(lastError)}`,
+      'Our AI couldn’t answer that request. Try again in a moment.',
     );
   }
 
@@ -121,11 +122,13 @@ export class GeminiLanguageModel implements LanguageModel {
     }
 
     if (!text)
-      throw new BadGatewayException('Gemini returned an empty response');
+      throw new BadGatewayException('Our AI didn’t send an answer. Try again.');
     try {
       return JSON.parse(text) as unknown;
     } catch {
-      throw new BadGatewayException('Gemini returned invalid JSON');
+      throw new BadGatewayException(
+        'Our AI gave an answer we couldn’t use. Try again.',
+      );
     }
   }
 

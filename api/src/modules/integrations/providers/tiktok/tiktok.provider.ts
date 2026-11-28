@@ -48,17 +48,18 @@ const PUBLIC_VIDEO_ID = /^\d+$/;
 const FAIL_REASONS: Record<string, string> = {
   file_format_check_failed:
     'TikTok couldn’t read the file format. Use MP4 (H.264), MOV or WebM.',
-  duration_check_failed: 'The video is longer than this account may post.',
+  duration_check_failed:
+    'The video is longer than this TikTok account can post. Use a shorter video.',
   frame_rate_check_failed:
     'The video must be between 23 and 60 frames per second.',
   picture_size_check_failed:
     'The video or photo size isn’t supported (360 to 4096 pixels per side; photos up to 1080p).',
-  internal: 'TikTok had an internal error. Try again.',
-  video_pull_failed: 'TikTok couldn’t download the video from its URL.',
-  photo_pull_failed: 'TikTok couldn’t download the photos from their URLs.',
-  publish_cancelled: 'The post was cancelled.',
+  internal: 'TikTok had a problem on its side. Try again.',
+  video_pull_failed: 'TikTok couldn’t download the video. Try again.',
+  photo_pull_failed: 'TikTok couldn’t download the photos. Try again.',
+  publish_cancelled: 'The post was cancelled on TikTok.',
   auth_removed:
-    'The creator removed Aby Socials’ access on TikTok. Reconnect the account.',
+    'Aby Socials’ access to this TikTok account was removed. Reconnect the account to keep posting.',
   spam_risk_too_many_posts:
     'This TikTok account has reached its daily posting limit.',
   spam_risk_user_banned_from_posting:
@@ -137,7 +138,7 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
     if (media.length === 0) {
       issues.push('add a video or photos. TikTok posts need media.');
     } else if (videos.length === 0 && media.length > MAX_IMAGES) {
-      issues.push(`add up to ${MAX_IMAGES} photos.`);
+      issues.push(`use up to ${MAX_IMAGES} photos.`);
     }
     const o = options as TikTokOptionsDto | null;
     if (!o?.mode) {
@@ -150,7 +151,9 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
       issues.push('choose who can see this post.');
     }
     if (o.brandedContent && o.privacyLevel === 'SELF_ONLY') {
-      issues.push('branded content can’t be private. Choose another audience.');
+      issues.push(
+        'choose an audience other than “Only me”. Branded content can’t be private.',
+      );
     }
     return issues;
   }
@@ -199,7 +202,7 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
   ): Promise<PublishResult> {
     const issues = this.readinessIssues(input);
     if (issues.length > 0)
-      throw new BadRequestException(`TikTok: ${issues[0]}`);
+      throw new BadRequestException(`To post to TikTok, ${issues[0]}`);
     const o = input.options as unknown as TikTokOptionsDto;
     const video = input.media.find((m) => m.kind === 'video');
     const direct = o.mode === 'direct';
@@ -215,7 +218,7 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
       const max = creator.max_video_post_duration_sec;
       if (video?.durationSec && max && video.durationSec > max) {
         throw new BadRequestException(
-          `This account can post videos up to ${max} seconds; this one is ${Math.round(video.durationSec)}.`,
+          `This TikTok account can post videos up to ${max} seconds; this one is ${Math.round(video.durationSec)}. Use a shorter video.`,
         );
       }
     }
@@ -283,7 +286,7 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
       // TikTok has no idempotency keys: a request that timed out may have landed.
       if (error instanceof PlatformApiError && error.status === 0) {
         throw new PlatformApiError(
-          `${error.message}. It may have reached TikTok, so check the profile before retrying.`,
+          'We lost contact with TikTok while sending this. It may have been posted, so check the profile before you try again.',
           0,
           false,
         );
@@ -310,7 +313,7 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
           state: 'failed',
           reason:
             FAIL_REASONS[status.fail_reason ?? ''] ??
-            `TikTok couldn’t publish this${status.fail_reason ? ` (${status.fail_reason})` : ''}.`,
+            'TikTok couldn’t publish this post. Check the video or photos and try again.',
         };
       case 'PUBLISH_COMPLETE': {
         // Empty for private posts: there is no public video to link to.

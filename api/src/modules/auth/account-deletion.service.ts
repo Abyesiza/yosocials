@@ -34,7 +34,7 @@ export class AccountDeletionService {
   async deleteAccount(userId: string, password: string): Promise<void> {
     const hash = await this.users.getPasswordHash(userId);
     if (!(await this.hasher.verify(password, hash))) {
-      throw new BadRequestException('Password is incorrect');
+      throw new BadRequestException('That password doesn’t match. Try again.');
     }
 
     const soleWorkspaces = await this.workspacesToDelete(userId);

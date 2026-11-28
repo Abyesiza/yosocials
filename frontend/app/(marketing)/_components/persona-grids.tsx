@@ -12,7 +12,7 @@ export function PersonaGrids() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#93c5fd]">Solutions</p>
         <h2 id="solutions-heading" className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-white md:text-4xl">Built for one account or a hundred</h2>
-        <p className="mt-4 max-w-2xl text-zinc-300">Each account has a persona and brand voice, so the agent writes like you, not like a template.</p>
+        <p className="mt-4 max-w-2xl text-zinc-300">Each account has a persona and brand voice, so AI writes like you, not like a template.</p>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {PERSONAS.map(({ Icon, title, body, points }) => (
             <article key={title} className="glass-card rounded-lg p-7">

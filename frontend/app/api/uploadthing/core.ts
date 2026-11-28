@@ -25,8 +25,8 @@ export const uploadRouter = {
         method: "POST",
         body: JSON.stringify({ files: files.map((file) => ({ contentType: file.type, size: file.size })) }),
       });
-      if (signedOut) throw new UploadThingError("Your session has ended. Sign in again to upload.");
-      if (!upstream?.ok) throw new UploadThingError(await apiMessage(upstream, "Uploading isn’t allowed here."));
+      if (signedOut) throw new UploadThingError("Your session has ended. Log in again to upload.");
+      if (!upstream?.ok) throw new UploadThingError(await apiMessage(upstream, "We couldn’t start your upload. Try again in a moment."));
       const { customIds } = (await upstream.json()) as { customIds: string[] };
       return { [UTFiles]: files.map((file, i) => ({ ...file, customId: customIds[i] })) };
     })

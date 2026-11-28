@@ -27,13 +27,13 @@ export function PasswordForm() {
         <Field label="Current password" error={errors.currentPassword?.message}>
           <Input type="password" autoComplete="current-password" aria-invalid={Boolean(errors.currentPassword)} {...form.register("currentPassword")} />
         </Field>
-        <Field label="New password" hint="At least 8 characters. Your other devices will be signed out." error={errors.newPassword?.message}>
+        <Field label="New password" hint="At least 8 characters. We’ll log you out on your other devices." error={errors.newPassword?.message}>
           <Input type="password" autoComplete="new-password" aria-invalid={Boolean(errors.newPassword)} {...form.register("newPassword")} />
         </Field>
         <FormError form={form} />
         <div className="flex items-center gap-3">
           <Button type="submit" variant="outline" loading={isSubmitting}>Change password</Button>
-          {changed && <span role="status" className="text-sm text-success">Password changed</span>}
+          {changed && <span role="status" className="text-sm text-success">Password changed. Your other devices are logged out.</span>}
         </div>
       </form>
     </Card>

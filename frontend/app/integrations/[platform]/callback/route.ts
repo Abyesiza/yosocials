@@ -12,18 +12,18 @@ import {
 } from "@/app/lib/server/oauth";
 import { platformLabel } from "@/app/components/ui/platform";
 
-// The platform sends the user back here (TIKTOK_REDIRECT_URI, X_REDIRECT_URI) with a code, or an error.
+// The platform sends the user back here (TIKTOK_REDIRECT_URI, X_REDIRECT_URI, LINKEDIN_REDIRECT_URI) with a code, or an error.
 export async function GET(request: NextRequest, { params }: RouteContext<"/integrations/[platform]/callback">) {
   const { platform } = await params;
   if (!isOAuthPlatform(platform)) {
-    return NextResponse.json({ message: "Not found" }, { status: 404 });
+    return NextResponse.json({ message: "We couldn’t find that page." }, { status: 404 });
   }
 
   const query = request.nextUrl.searchParams;
   const saved = readCookie(request);
   if (!saved || saved.state !== query.get("state")) {
     // Stale, replayed or started in another browser: never act on it.
-    return finish(redirectTo(request, saved ? accountsPage(saved.workspaceId, { connect_error: "That sign-in didn’t match the one started here. Try again." }) : "/dashboard", null));
+    return finish(redirectTo(request, saved ? accountsPage(saved.workspaceId, { connect_error: "We couldn’t match that sign-in to this browser, so nothing was connected. Try connecting again." }) : "/dashboard", null));
   }
 
   const back = (params: Record<string, string>, renewed = null as Parameters<typeof redirectTo>[2]) =>
@@ -31,11 +31,12 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/integ
 
   const code = query.get("code");
   if (!code) {
-    const denied = query.get("error") === "access_denied";
+    // LinkedIn uses its own codes for a cancelled sign-in.
+    const denied = ["access_denied", "user_cancelled_login", "user_cancelled_authorize"].includes(query.get("error") ?? "");
     return back({
       connect_error: denied
         ? `You didn’t allow access on ${platformLabel(platform)}, so nothing was connected.`
-        : (query.get("error_description") ?? `${platformLabel(platform)} didn’t finish the sign-in. Try again.`),
+        : (query.get("error_description") ?? `${platformLabel(platform)} didn’t finish the sign-in, so nothing was connected. Try again.`),
     });
   }
 
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/integ
     return finish(NextResponse.redirect(new URL("/signin", request.url), 303));
   }
   if (!upstream?.ok) {
-    return back({ connect_error: await apiMessage(upstream, "Couldn’t connect the account. Try again.") }, renewed);
+    return back({ connect_error: await apiMessage(upstream, `We couldn’t connect your ${platformLabel(platform)} account. Try again.`) }, renewed);
   }
   return back({ connected: platform }, renewed);
 }

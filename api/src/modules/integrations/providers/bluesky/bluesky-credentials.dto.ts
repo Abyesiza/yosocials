@@ -16,14 +16,18 @@ export class BlueskyCredentialsDto {
     example: 'abysocials.bsky.social',
     description: 'Handle or DID',
   })
-  @IsString()
-  @MinLength(3)
+  @IsString({ message: 'Enter your Bluesky handle, like name.bsky.social' })
+  @MinLength(3, { message: 'Enter your Bluesky handle, like name.bsky.social' })
   identifier: string;
 
   @ApiProperty({ example: 'abcd-efgh-ijkl-mnop' })
-  @IsString()
+  @IsString({
+    message:
+      'Enter a Bluesky app password, like abcd-efgh-ijkl-mnop. Create one in Bluesky under Settings → Privacy and security → App passwords',
+  })
   @Matches(/^[a-z0-9]{4}(-[a-z0-9]{4}){3}$/, {
-    message: 'appPassword must be a Bluesky app password (xxxx-xxxx-xxxx-xxxx)',
+    message:
+      'Enter a Bluesky app password, like abcd-efgh-ijkl-mnop. Create one in Bluesky under Settings → Privacy and security → App passwords',
   })
   appPassword: string;
 
@@ -32,6 +36,9 @@ export class BlueskyCredentialsDto {
     description: 'PDS host. Only needed for self-hosted accounts.',
   })
   @IsOptional()
-  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @IsUrl(
+    { protocols: ['https'], require_protocol: true },
+    { message: 'Enter your Bluesky server address, starting with https://' },
+  )
   service?: string;
 }

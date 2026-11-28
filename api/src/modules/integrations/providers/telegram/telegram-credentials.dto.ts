@@ -7,9 +7,11 @@ import { IsString, Matches } from 'class-validator';
  */
 export class TelegramCredentialsDto {
   @ApiProperty({ example: '123456789:AAH...', description: 'From @BotFather' })
-  @IsString()
+  @IsString({
+    message: 'Paste the bot token from @BotFather, like 123456789:ABC…',
+  })
   @Matches(/^\d+:[A-Za-z0-9_-]{30,}$/, {
-    message: 'botToken must look like 123456789:ABC... (from @BotFather)',
+    message: 'Paste the bot token from @BotFather, like 123456789:ABC…',
   })
   botToken: string;
 
@@ -17,9 +19,13 @@ export class TelegramCredentialsDto {
     example: '@abysocials',
     description: 'Public channel @username, or numeric id like -1001234567890',
   })
-  @IsString()
+  @IsString({
+    message:
+      'Enter the channel’s @username, or its numeric ID like -1001234567890',
+  })
   @Matches(/^(@[A-Za-z0-9_]{4,}|-?\d+)$/, {
-    message: 'chatId must be a channel @username or a numeric chat id',
+    message:
+      'Enter the channel’s @username, or its numeric ID like -1001234567890',
   })
   chatId: string;
 }

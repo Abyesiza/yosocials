@@ -19,7 +19,18 @@ function messageOf(body: unknown, status: number): string {
     if (Array.isArray(m)) return m.join("\n");
     if (typeof m === "string") return m;
   }
-  return status >= 500 ? "Something went wrong. Please try again." : `Request failed (${status})`;
+  return fallbackMessage(status);
+}
+
+function fallbackMessage(status: number): string {
+  if (status === 401) return "Your session has ended. Log in again to continue.";
+  if (status === 403) return "You don’t have permission to do that. Ask a workspace admin.";
+  if (status === 404) return "We couldn’t find that. It may have been deleted.";
+  if (status === 409) return "This changed while you were working. Reload the page and try again.";
+  if (status === 413) return "That file is too large to upload.";
+  if (status === 429) return "That’s a lot of requests in a short time. Wait a minute, then try again.";
+  if (status >= 500) return "We couldn’t reach our server. Try again in a moment.";
+  return "We couldn’t do that. Check the details and try again.";
 }
 
 export async function api<T>(

@@ -1,4 +1,9 @@
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  type INestApplication,
+  ValidationPipe,
+  type ValidationError,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { EnvironmentVariables } from './config/env.validation.js';
@@ -20,6 +25,8 @@ export function configureApp(app: INestApplication): void {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (errors) =>
+        new BadRequestException([...new Set(messagesOf(errors))]),
     }),
   );
 
@@ -33,4 +40,11 @@ export function configureApp(app: INestApplication): void {
       .build(),
   );
   SwaggerModule.setup('api/docs', app, document);
+}
+
+function messagesOf(errors: ValidationError[]): string[] {
+  return errors.flatMap((e) => [
+    ...Object.values(e.constraints ?? {}),
+    ...messagesOf(e.children ?? []),
+  ]);
 }

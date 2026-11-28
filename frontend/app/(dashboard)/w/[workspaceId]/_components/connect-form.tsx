@@ -66,10 +66,10 @@ export function ConnectForm({ platform, onDone }: { platform: Platform; onDone: 
           ))}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="This account is" hint="The AI writes differently for each.">
+          <Field label="This account is" hint="AI writes in a different style for each.">
             <Select {...form.register("persona")}>
               <option value="individual">A person</option>
-              <option value="influencer">A creator / influencer</option>
+              <option value="influencer">A creator or influencer</option>
               <option value="company">A company or brand</option>
             </Select>
           </Field>
@@ -77,9 +77,9 @@ export function ConnectForm({ platform, onDone }: { platform: Platform; onDone: 
             <Textarea rows={2} placeholder="Warm, concise, a little playful. No jargon." {...form.register("voice")} />
           </Field>
         </div>
-        <p className="text-xs text-muted-foreground">We check these with {platformLabel(platform)} and store them encrypted.</p>
+        <p className="text-xs text-muted-foreground">We check these details with {platformLabel(platform)} and store them encrypted.</p>
         <FormError form={form} />
-        <Button type="submit" loading={isSubmitting}>Connect</Button>
+        <Button type="submit" loading={isSubmitting}>Connect account</Button>
       </form>
     </Card>
   );

@@ -28,10 +28,10 @@ const sections: LegalSection[] = [
     body: (
       <>
         <ul>
-          <li><strong>Your account:</strong> name, email address, a hash of your password (never the password itself), and when you last signed in.</li>
-          <li><strong>Workspaces:</strong> workspace names, who is a member, and each member&apos;s role.</li>
+          <li><strong>Your account:</strong> name, email address, a hash of your password (never the password itself), and when you last logged in.</li>
+          <li><strong>Workspaces:</strong> workspace names, who is a member, and each member’s role.</li>
           <li><strong>Connected social accounts:</strong> the handle, display name, profile link, profile picture link and platform ID of each account you connect, plus the credentials you give us to act for it (for example an app password, access token, bot token or webhook URL) and any login session the platform issues.</li>
-          <li><strong>Your content:</strong> posts, drafts, per-platform versions, schedules, briefs you give the AI planner, and each account&apos;s persona and brand-voice notes.</li>
+          <li><strong>Your content:</strong> posts, drafts, per-platform versions, schedules, briefs you give the AI planner, and each account’s persona and brand-voice notes.</li>
           <li><strong>Media you upload:</strong> the videos and photos you attach to posts, with their file type, size and video length. They are stored at a web address only Aby Socials links to, so that platforms such as TikTok can fetch them when you publish; for X, we send the files to X ourselves.</li>
           <li><strong>Performance data:</strong> public engagement counts (likes, reposts, replies, quotes) for posts you publish through {LEGAL.product}, collected for 30 days after publishing.</li>
           <li><strong>Technical data:</strong> session cookies and the basic request information our servers need to run and secure the service.</li>
@@ -69,7 +69,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         When you plan with AI or ask for per-platform versions, we send your brief or post text, together with the selected
-        accounts&apos; platform, handle, persona and brand voice, to Google&apos;s Gemini API to generate drafts. Google
+        accounts’ platform, handle, persona and brand voice, to Google’s Gemini API to generate drafts. Google
         processes this under the <Ext href="https://ai.google.dev/gemini-api/terms">Gemini API Additional Terms</Ext>. We
         never send your passwords or platform credentials to AI providers. AI output is saved as drafts, and nothing it
         writes is published until you approve it.
@@ -97,9 +97,9 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          When you connect an account, that platform&apos;s own terms and privacy policy also apply, and we only use the
+          When you connect an account, that platform’s own terms and privacy policy also apply, and we only use the
           access it grants to publish your posts, read your profile and read the engagement on posts we published. You can
-          disconnect an account in {LEGAL.product} at any time, and revoke our access in the platform&apos;s own settings.
+          disconnect an account in {LEGAL.product} at any time, and revoke our access in the platform’s own settings.
         </p>
         <ul>
           {PLATFORM_POLICIES.map((p) => (
@@ -120,7 +120,7 @@ const sections: LegalSection[] = [
         <p>
           When you connect an account by signing in to a platform (for example with Facebook, Instagram, Threads, YouTube,
           TikTok, X, LinkedIn or Pinterest login), we ask only for the permissions needed for the features you use, and we
-          show them on the platform&apos;s consent screen before you agree. Depending on the platform, we receive:
+          show them on the platform’s consent screen before you agree. Depending on the platform, we receive:
         </p>
         <ul>
           <li><strong>Basic profile:</strong> account or page ID, name, username, profile picture and profile link, so you can see which account is connected.</li>
@@ -132,9 +132,9 @@ const sections: LegalSection[] = [
         <ul>
           <li>do not sell platform data, share it with data brokers or use it for advertising;</li>
           <li>do not use platform data to train AI or machine-learning models;</li>
-          <li>do not read private messages, follower lists or other accounts&apos; data beyond what is listed above;</li>
+          <li>do not read private messages, follower lists or other accounts’ data beyond what is listed above;</li>
           <li>do not let other users see your platform data, except members of the workspace you connected the account to;</li>
-          <li>delete a platform&apos;s data and tokens when you disconnect the account, delete the workspace or delete your account, and within 30 days when you revoke our access on the platform or ask us to.</li>
+          <li>delete a platform’s data and tokens when you disconnect the account, delete the workspace or delete your account, and within 30 days when you revoke our access on the platform or ask us to.</li>
         </ul>
         <p>
           For step-by-step deletion instructions, see our <Link href="/data-deletion">data deletion page</Link> at{" "}
@@ -149,12 +149,12 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          {LEGAL.product}&apos;s use and transfer to any other app of information received from Google APIs will adhere to the{" "}
+          {LEGAL.product}’s use and transfer to any other app of information received from Google APIs will adhere to the{" "}
           <Ext href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</Ext>, including the Limited Use requirements.
         </p>
         <p>
           {LEGAL.product} uses YouTube API Services. When you connect YouTube, you agree to be bound by the <Ext href="https://www.youtube.com/t/terms">YouTube Terms of Service</Ext>,
-          and Google&apos;s use of your data is covered by the <Ext href="https://policies.google.com/privacy">Google Privacy Policy</Ext>.
+          and Google’s use of your data is covered by the <Ext href="https://policies.google.com/privacy">Google Privacy Policy</Ext>.
           You can revoke our access at any time on the <Ext href="https://security.google.com/settings/security/permissions">Google security settings page</Ext>.
         </p>
       </>
@@ -165,7 +165,7 @@ const sections: LegalSection[] = [
     title: "Cookies and local storage",
     body: (
       <p>
-        We use two strictly necessary, httpOnly cookies to keep you signed in, and your browser&apos;s local storage to remember
+        We use two strictly necessary, httpOnly cookies to keep you logged in, and your browser’s local storage to remember
         your light or dark theme. We do not use advertising or cross-site tracking cookies.
       </p>
     ),
@@ -177,8 +177,8 @@ const sections: LegalSection[] = [
       <ul>
         <li>Passwords are stored as scrypt hashes.</li>
         <li>Platform credentials and sessions are encrypted at rest with AES-256-GCM, and are never shown back to you or sent to your browser.</li>
-        <li>Sign-in tokens are short-lived and kept in httpOnly cookies; refresh tokens are single use and stored hashed.</li>
-        <li>Data travels over encrypted connections, access is limited by workspace role, and sign-in is rate limited.</li>
+        <li>Login tokens are short-lived and kept in httpOnly cookies; refresh tokens are single use and stored hashed.</li>
+        <li>Data travels over encrypted connections, access is limited by workspace role, and logging in is rate limited.</li>
       </ul>
     ),
   },

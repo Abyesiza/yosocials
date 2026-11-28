@@ -43,7 +43,7 @@ export function WorkspaceSwitcher() {
           {me?.workspaces.map((w) => (
             <Link key={w.id} role="menuitem" href={`/w/${w.id}`} onClick={close} className={cn(item, focusRing)}>
               <span className="min-w-0 flex-1 truncate">{w.name}</span>
-              {w.id === workspaceId && <LuCheck className="h-4 w-4 text-primary" aria-label="Current" />}
+              {w.id === workspaceId && <LuCheck className="h-4 w-4 text-primary" aria-label="Current workspace" />}
             </Link>
           ))}
           <div className="my-1 border-t border-border" />

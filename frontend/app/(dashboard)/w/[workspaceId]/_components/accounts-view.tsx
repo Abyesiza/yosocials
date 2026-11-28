@@ -27,11 +27,11 @@ export function AccountsView() {
 
   return (
     <div>
-      <PageHeader eyebrow="Channels" title="Accounts" subtitle="The social accounts and channels this workspace posts to." />
+      <PageHeader eyebrow="Connections" title="Accounts" subtitle="The social accounts this workspace posts to, including Telegram and Discord channels." />
 
       {connected && (
         <p role="status" className="mb-6 flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
-          <LuCircleCheck className="h-4 w-4 shrink-0" aria-hidden /> {platformLabel(connected)} is connected.
+          <LuCircleCheck className="h-4 w-4 shrink-0" aria-hidden /> {platformLabel(connected)} account connected. You can post to it now.
           <button type="button" onClick={dismiss} className="ml-auto text-xs font-semibold underline underline-offset-4">Dismiss</button>
         </p>
       )}
@@ -39,7 +39,7 @@ export function AccountsView() {
 
       {admin && (
         <section aria-labelledby="connect-heading" className="mb-10 space-y-4">
-          <h2 id="connect-heading" className="text-sm font-semibold text-foreground">Connect a platform</h2>
+          <h2 id="connect-heading" className="text-sm font-semibold text-foreground">Connect an account</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {(platforms ?? []).map((p) => (
               <button
@@ -55,7 +55,7 @@ export function AccountsView() {
               >
                 <PlatformIcon platform={p.platform} size={26} />
                 {p.displayName}
-                <span className="text-[11px] font-normal text-muted-foreground">{p.supportsMetrics ? "Posts + stats" : "Posts only"}</span>
+                <span className="text-[11px] font-normal text-muted-foreground">{p.supportsMetrics ? "Posts and analytics" : "Posts only"}</span>
               </button>
             ))}
           </div>
@@ -67,10 +67,10 @@ export function AccountsView() {
       )}
 
       <section aria-labelledby="connected-heading" className="space-y-4">
-        <h2 id="connected-heading" className="text-sm font-semibold text-foreground">Connected</h2>
+        <h2 id="connected-heading" className="text-sm font-semibold text-foreground">Connected accounts</h2>
         <ErrorNote error={error} />
         {!accounts && !error && <RowsSkeleton rows={3} />}
-        {accounts?.length === 0 && <EmptyState title="No accounts yet" body={admin ? "Pick a platform above to connect one." : "Ask an admin to connect one."} />}
+        {accounts?.length === 0 && <EmptyState title="No accounts connected yet" body={admin ? "Choose a platform above to connect your first account." : "Ask a workspace admin to connect one."} />}
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {accounts?.map((a) => <AccountCard key={a.id} account={a} onChange={() => mutate()} />)}
         </div>

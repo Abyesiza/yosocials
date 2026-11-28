@@ -29,7 +29,7 @@ function ThisWeek() {
   ] as const;
   return (
     <Card>
-      <CardHeader title="Last 7 days" action={<Link href={href("/analytics")} className="text-xs font-semibold text-primary hover:underline">Analytics</Link>} />
+      <CardHeader title="Last 7 days" action={<Link href={href("/analytics")} className="text-xs font-semibold text-primary hover:underline">View analytics</Link>} />
       <dl className="grid grid-cols-2 gap-px bg-border">
         {stats.map(([label, value]) => (
           <div key={label} className="bg-card px-5 py-4">
@@ -55,9 +55,9 @@ function UpNext() {
 
   return (
     <Card>
-      <CardHeader title="Up next" action={<Link href={href("/calendar")} className="text-xs font-semibold text-primary hover:underline">Calendar</Link>} />
+      <CardHeader title="Up next" action={<Link href={href("/calendar")} className="text-xs font-semibold text-primary hover:underline">View calendar</Link>} />
       {!data && <div className="space-y-3 p-5"><Bone className="h-10 w-full" /><Bone className="h-10 w-full" /></div>}
-      {data && upcoming.length === 0 && <p className="px-5 py-4 text-sm text-muted-foreground">Nothing scheduled this week.</p>}
+      {data && upcoming.length === 0 && <p className="px-5 py-4 text-sm text-muted-foreground">Nothing scheduled for the next 7 days.</p>}
       <ul className="divide-y divide-border">
         {upcoming.map((i) => (
           <li key={i.id}>

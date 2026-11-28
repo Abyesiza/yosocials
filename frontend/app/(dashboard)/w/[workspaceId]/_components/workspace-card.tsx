@@ -31,7 +31,7 @@ export function WorkspaceCard() {
           <Input disabled={!can("admin")} aria-invalid={Boolean(errors.name)} {...form.register("name")} />
         </Field>
         <FormError form={form} />
-        {can("admin") && <Button type="submit" variant="outline" loading={isSubmitting} disabled={!isDirty}>Save</Button>}
+        {can("admin") && <Button type="submit" variant="outline" loading={isSubmitting} disabled={!isDirty}>Save changes</Button>}
       </form>
     </Card>
   );

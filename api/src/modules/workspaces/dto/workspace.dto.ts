@@ -17,9 +17,11 @@ const trim = ({ value }: { value: unknown }): unknown =>
 export class CreateWorkspaceDto {
   @ApiProperty({ example: 'Acme Marketing', maxLength: 120 })
   @Transform(trim)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
+  @IsString({ message: 'Enter a workspace name' })
+  @MinLength(1, { message: 'Enter a workspace name' })
+  @MaxLength(120, {
+    message: 'Use 120 characters or fewer for the workspace name',
+  })
   name: string;
 }
 
@@ -28,18 +30,24 @@ export class UpdateWorkspaceDto extends CreateWorkspaceDto {}
 export class AddMemberDto {
   @ApiProperty({ example: 'teammate@example.com' })
   @Transform(trim)
-  @IsEmail()
-  @MaxLength(320)
+  @IsEmail({}, { message: 'Enter their email address, like name@example.com' })
+  @MaxLength(320, {
+    message: 'Enter their email address, like name@example.com',
+  })
   email: string;
 
   @ApiProperty({ enum: WorkspaceRole, example: WorkspaceRole.Editor })
-  @IsEnum(WorkspaceRole)
+  @IsEnum(WorkspaceRole, {
+    message: 'Choose a role: owner, admin, editor or viewer',
+  })
   role: WorkspaceRole;
 }
 
 export class UpdateMemberDto {
   @ApiProperty({ enum: WorkspaceRole })
-  @IsEnum(WorkspaceRole)
+  @IsEnum(WorkspaceRole, {
+    message: 'Choose a role: owner, admin, editor or viewer',
+  })
   role: WorkspaceRole;
 }
 

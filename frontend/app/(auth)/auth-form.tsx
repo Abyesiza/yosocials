@@ -53,23 +53,23 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         <Input type="password" autoComplete={signup ? "new-password" : "current-password"} aria-invalid={Boolean(errors.password)} {...form.register("password")} />
       </Field>
       {signup && (
-        <Field label="Workspace name" hint="Optional. You can rename it later." error={errors.workspaceName?.message}>
+        <Field label="Workspace name (optional)" hint="You can rename it later." error={errors.workspaceName?.message}>
           <Input placeholder="Acme Marketing" {...form.register("workspaceName")} />
         </Field>
       )}
       <FormError form={form} />
       {signup && (
         <p className="text-xs leading-5 text-muted-foreground">
-          By creating an account you agree to our{" "}
+          By signing up, you agree to our{" "}
           <Link href="/terms" className="font-medium text-primary hover:underline">Terms of Service</Link> and{" "}
           <Link href="/privacy" className="font-medium text-primary hover:underline">Privacy Policy</Link>.
         </p>
       )}
       <Button type="submit" size="lg" loading={isSubmitting} className="w-full">
-        {signup ? "Create account" : "Log in"}
+        {signup ? "Sign up" : "Log in"}
       </Button>
       <p className="pt-2 text-center text-sm text-muted-foreground">
-        {signup ? "Have an account? " : "Don't have an account? "}
+        {signup ? "Have an account? " : "Don’t have an account? "}
         <Link href={switchHref} className="font-semibold text-primary hover:underline">
           {signup ? "Log in" : "Sign up"}
         </Link>

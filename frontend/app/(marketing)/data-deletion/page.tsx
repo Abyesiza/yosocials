@@ -12,7 +12,7 @@ export const metadata = publicPageMetadata({
 const REVOKE = [
   { name: "Bluesky", how: "Settings → Privacy and security → App passwords → delete the Aby Socials password." },
   { name: "Mastodon", how: "On your server: Preferences → Development (or Account → Authorized apps) → remove the application." },
-  { name: "Telegram", how: "Remove the bot from your channel's administrators, or revoke its token with @BotFather." },
+  { name: "Telegram", how: "Remove the bot from your channel’s administrators, or revoke its token with @BotFather." },
   { name: "Discord", how: "Server Settings → Integrations → Webhooks → delete the webhook." },
 ] as const;
 
@@ -23,12 +23,12 @@ const sections: LegalSection[] = [
     body: (
       <>
         <ul>
-          <li>Sign in and open <Link href="/me">your profile</Link>.</li>
+          <li>Log in and open <Link href="/me">your profile</Link>.</li>
           <li>Under <strong>Delete account</strong>, enter your password, tick the confirmation and choose <strong>Delete my account</strong>.</li>
         </ul>
         <p>
           If a workspace you own has other members, make one of them an owner first (or delete that workspace), so your
-          teammates don&apos;t lose it.
+          teammates don’t lose it.
         </p>
       </>
     ),
@@ -39,7 +39,7 @@ const sections: LegalSection[] = [
     body: (
       <ul>
         <li>Your profile: name, email and password hash.</li>
-        <li>All your sign-in sessions; every device is signed out at once.</li>
+        <li>All your login sessions; every device is logged out at once.</li>
         <li>Every workspace where you are the only member, with its connected accounts, stored credentials and platform sessions, posts, drafts, schedules, uploaded videos and photos, and analytics.</li>
         <li>Your membership in workspaces shared with others. Posts you created there stay with the workspace, without your name on them.</li>
       </ul>
@@ -92,7 +92,7 @@ const sections: LegalSection[] = [
     title: "Ask us to delete it",
     body: (
       <p>
-        If you can&apos;t sign in, or you connected an account through a platform login, email{" "}
+        If you can’t log in, or you connected an account through a platform login, email{" "}
         <a href={`mailto:${LEGAL.privacyEmail}?subject=Data%20deletion%20request`}>{LEGAL.privacyEmail}</a> from the address on
         your account. Tell us which account or platform the request is about. We will confirm by email when the data is gone, within 30 days.
       </p>

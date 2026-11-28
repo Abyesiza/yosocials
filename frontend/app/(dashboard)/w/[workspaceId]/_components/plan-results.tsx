@@ -27,13 +27,13 @@ export function PlanResults({
           <span className="ml-2 text-xs font-normal text-muted-foreground">by {result.model}</span>
         </h2>
         {result.posts.some((p) => p.status === "draft") && (
-          <Button size="sm" onClick={onApproveAll} loading={approving}>Approve all & schedule</Button>
+          <Button size="sm" onClick={onApproveAll} loading={approving}>Approve and schedule all</Button>
         )}
       </div>
       {result.skipped.length > 0 && (
         <details className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
           <summary className="cursor-pointer font-semibold">
-            {result.skipped.length} suggestion{result.skipped.length === 1 ? " was" : "s were"} dropped for breaking platform rules
+            We left out {result.skipped.length} suggestion{result.skipped.length === 1 ? "" : "s"} that broke platform rules
           </summary>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
             {result.skipped.map((s) => <li key={s}>{s}</li>)}
