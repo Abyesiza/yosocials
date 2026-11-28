@@ -57,6 +57,8 @@ function Composer() {
   }
 
   const chosen = accounts.filter((a) => selected.includes(a.id));
+  const chosenPlatforms = [...new Set(chosen.map((a) => a.platform))];
+  const chosenCaps = chosenPlatforms.flatMap((p) => capOf.get(p) ?? []);
   const textFor = (a: Account) => overrides[a.id] ?? body;
   const tooLong = chosen.some((a) => lengthFor(textFor(a), capOf.get(a.platform)) > (capOf.get(a.platform)?.maxTextLength ?? Infinity));
   const summary: MediaSummary = { kind: media[0]?.kind ?? null, durationSec: media[0]?.durationSec ?? null };
@@ -88,7 +90,7 @@ function Composer() {
       const post = await api<Post>(`${base}/posts`, {
         body: {
           body,
-          media: toMediaBody(media),
+          media: toMediaBody(media, chosenPlatforms),
           ...(when === "schedule" && { scheduledAt: new Date(scheduledAt).toISOString() }),
           targets: chosen.map((a) => ({
             accountId: a.id,
@@ -116,7 +118,7 @@ function Composer() {
               <span className="text-xs tabular-nums text-muted-foreground">{graphemes(body)} characters</span>
             </div>
           </Card>
-          <MediaPicker media={media} onChange={setMedia} />
+          <MediaPicker media={media} onChange={setMedia} platforms={chosenCaps} />
           {tiktokAccounts.map((a) => (
             <TikTokSettings
               key={a.id}
@@ -149,6 +151,7 @@ function Composer() {
               cap={capOf.get(a.platform)}
               text={textFor(a)}
               mediaCount={media.length}
+              media={media}
               custom={overrides[a.id] !== undefined}
               onCustomize={() => setOverrides((o) => ({ ...o, [a.id]: body }))}
               onReset={() => setOverrides((o) => Object.fromEntries(Object.entries(o).filter(([id]) => id !== a.id)))}

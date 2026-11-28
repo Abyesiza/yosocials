@@ -19,6 +19,8 @@ export const MAX_BYTES: Readonly<Record<MediaKind, number>> = {
   image: 16 * 1024 * 1024,
 };
 export const MAX_IMAGES = 35;
+/** A video and its copies prepared for platforms (one per platform, at most). */
+export const MAX_VIDEO_COPIES = 8;
 
 /** `<workspaceId>_<uuid>.<ext>`: the UploadThing custom id, which ties a file to its workspace. */
 export const MEDIA_PATH_PATTERN =

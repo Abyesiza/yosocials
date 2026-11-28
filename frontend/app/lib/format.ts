@@ -82,3 +82,9 @@ export function xWeightedLength(text: string): number {
   }
   return length;
 }
+
+/** Video length like 0:42 or 12:05. */
+export function clock(seconds: number): string {
+  const s = Math.round(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}

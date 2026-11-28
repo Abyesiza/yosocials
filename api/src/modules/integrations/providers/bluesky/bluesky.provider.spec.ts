@@ -12,6 +12,7 @@ import {
   mockFetch,
   type RecordedRequest,
 } from '../../../../../test/support/mock-fetch.js';
+import type { PublishMedia } from '../../interfaces/platform-provider.interface.js';
 import type { LinkPreviewService } from '../../link-preview/link-preview.service.js';
 import type { ProviderSessionsService } from '../../sessions/provider-sessions.service.js';
 import { BlueskyClientFactory } from './bluesky-client.js';
@@ -52,7 +53,7 @@ function setup(
 const routes = (
   extra: Record<
     string,
-    (r: RecordedRequest) => { status?: number; body?: unknown }
+    (r: RecordedRequest) => { status?: number; body?: unknown; raw?: string }
   > = {},
 ) => ({
   [`POST ${PDS}/com.atproto.server.createSession`]: () => ({
@@ -80,6 +81,68 @@ const routes = (
 });
 
 const path = (r: RecordedRequest) => r.url.pathname.split('/').pop();
+
+const VIDEO = 'video.bsky.app/xrpc';
+const MEDIA = 'abysocials.test/media';
+const blob = (mimeType: string, size: number) => ({
+  $type: 'blob',
+  ref: { $link: BLOB_CID },
+  mimeType,
+  size,
+});
+const photo = (name: string, width = 1200, height = 800): PublishMedia => ({
+  kind: 'image',
+  url: `https://${MEDIA}/${name}.jpg`,
+  contentType: 'image/jpeg',
+  size: 10,
+  width,
+  height,
+});
+const video: PublishMedia = {
+  kind: 'video',
+  url: `https://${MEDIA}/ws_clip.mp4`,
+  contentType: 'video/mp4',
+  size: 12,
+  durationSec: 8,
+  width: 1080,
+  height: 1920,
+};
+const job = (state: string, extra: object = {}) => ({
+  jobStatus: { jobId: 'job-1', did: DID, state, ...extra },
+});
+const embedOf = (calls: RecordedRequest[]) =>
+  (
+    calls.find((c) => path(c) === 'com.atproto.repo.createRecord')!.body as {
+      record: { embed: Record<string, unknown> };
+    }
+  ).record.embed;
+
+/** Routes for media: our files, the PDS blob upload and Bluesky's video service. */
+const mediaRoutes = (
+  extra: Record<
+    string,
+    (r: RecordedRequest) => { status?: number; body?: unknown; raw?: string }
+  > = {},
+) =>
+  routes({
+    [`GET ${MEDIA}/*`]: () => ({ raw: 'file-bytes' }),
+    [`POST ${PDS}/com.atproto.repo.uploadBlob`]: () => ({
+      body: { blob: blob('image/jpeg', 10) },
+    }),
+    [`GET ${PDS}/com.atproto.server.getServiceAuth`]: (r) => ({
+      body: { token: `token-for-${r.url.searchParams.get('lxm')}` },
+    }),
+    [`GET ${VIDEO}/app.bsky.video.getUploadLimits`]: () => ({
+      body: { canUpload: true, remainingDailyVideos: 20 },
+    }),
+    [`POST ${VIDEO}/app.bsky.video.uploadVideo`]: () => ({
+      body: job('JOB_STATE_CREATED'),
+    }),
+    [`GET ${VIDEO}/app.bsky.video.getJobStatus`]: () => ({
+      body: job('JOB_STATE_COMPLETED', { blob: blob('video/mp4', 12) }),
+    }),
+    ...extra,
+  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -239,6 +302,193 @@ describe('BlueskyProvider (official SDK)', () => {
       $type: 'app.bsky.embed.external',
       external: { uri: 'https://example.com/menu', title: 'Autumn menu' },
     });
+  });
+
+  it('uploads photos as blobs and embeds them with their aspect ratios', async () => {
+    const { provider, fetchPreview } = setup();
+    const { calls } = mockFetch(mediaRoutes());
+
+    await provider.publish(creds, {
+      text: 'Autumn menu https://example.com/menu',
+      idempotencyKey: 'k',
+      media: [photo('a'), photo('b', 800, 1000)],
+      options: null,
+    });
+
+    const uploads = calls.filter(
+      (c) => path(c) === 'com.atproto.repo.uploadBlob',
+    );
+    expect(uploads).toHaveLength(2);
+    expect(uploads[0].headers['content-type']).toBe('image/jpeg');
+    expect(new TextDecoder().decode(uploads[0].body as Uint8Array)).toBe(
+      'file-bytes',
+    );
+    expect(embedOf(calls)).toMatchObject({
+      $type: 'app.bsky.embed.images',
+      images: [
+        { alt: '', aspectRatio: { width: 1200, height: 800 } },
+        { alt: '', aspectRatio: { width: 800, height: 1000 } },
+      ],
+    });
+    // Media takes the post's one embed, so the link gets no card.
+    expect(fetchPreview).not.toHaveBeenCalled();
+  });
+
+  it('refuses media Bluesky can’t take before calling it', async () => {
+    const { provider } = setup();
+    const { calls } = mockFetch(mediaRoutes());
+    const send = (media: PublishMedia[]) =>
+      provider.publish(creds, {
+        text: 'hi',
+        idempotencyKey: 'k',
+        media,
+        options: null,
+      });
+
+    await expect(
+      send(['a', 'b', 'c', 'd', 'e'].map((n) => photo(n))),
+    ).rejects.toThrow('To post to Bluesky, add up to 4 photos.');
+    await expect(send([{ ...photo('a'), size: 3_000_000 }])).rejects.toThrow(
+      /photos up to 2 MB/,
+    );
+    await expect(
+      send([{ ...video, contentType: 'video/quicktime' }]),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('sends video through the video service and embeds the processed blob', async () => {
+    const { provider } = setup();
+    const { calls } = mockFetch(mediaRoutes());
+
+    await provider.publish(creds, {
+      text: 'Watch this',
+      idempotencyKey: 'k',
+      media: [video],
+      options: null,
+    });
+
+    const auths = calls.filter(
+      (c) => path(c) === 'com.atproto.server.getServiceAuth',
+    );
+    expect(auths.map((c) => c.headers['atproto-proxy'])).toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(
+      auths.map((c) => [
+        c.url.searchParams.get('aud'),
+        c.url.searchParams.get('lxm'),
+      ]),
+    ).toEqual([
+      ['did:web:video.bsky.app', 'app.bsky.video.getUploadLimits'],
+      // No PDS in the test session's DID document, so the login service stands in.
+      ['did:web:bsky.social', 'com.atproto.repo.uploadBlob'],
+    ]);
+    const upload = calls.find((c) => path(c) === 'app.bsky.video.uploadVideo')!;
+    expect(upload.headers.authorization).toBe(
+      'Bearer token-for-com.atproto.repo.uploadBlob',
+    );
+    expect(upload.headers['content-type']).toBe('video/mp4');
+    expect(Object.fromEntries(upload.url.searchParams)).toEqual({
+      did: DID,
+      name: 'ws_clip.mp4',
+    });
+    expect(
+      calls
+        .find((c) => path(c) === 'app.bsky.video.getJobStatus')!
+        .url.searchParams.get('jobId'),
+    ).toBe('job-1');
+    expect(embedOf(calls)).toEqual({
+      $type: 'app.bsky.embed.video',
+      video: blob('video/mp4', 12),
+      aspectRatio: { width: 1080, height: 1920 },
+    });
+  });
+
+  it('reuses the job when the video service already has the video', async () => {
+    const { provider } = setup();
+    const { calls } = mockFetch(
+      mediaRoutes({
+        [`POST ${VIDEO}/app.bsky.video.uploadVideo`]: () => ({
+          status: 409,
+          body: {
+            error: 'already_exists',
+            message: 'Video already processed',
+            ...job('JOB_STATE_COMPLETED', { blob: blob('video/mp4', 12) }),
+          },
+        }),
+      }),
+    );
+
+    await provider.publish(creds, {
+      text: 'Again',
+      idempotencyKey: 'k',
+      media: [video],
+      options: null,
+    });
+
+    expect(calls.map(path)).not.toContain('app.bsky.video.getJobStatus');
+    expect(embedOf(calls)).toMatchObject({ $type: 'app.bsky.embed.video' });
+  });
+
+  it('explains a failed video job and posts nothing', async () => {
+    const { provider } = setup();
+    const { calls } = mockFetch(
+      mediaRoutes({
+        [`GET ${VIDEO}/app.bsky.video.getJobStatus`]: () => ({
+          body: job('JOB_STATE_FAILED', {
+            failureCode: 'encoding_failure',
+            error: 'ffmpeg exited with 1',
+          }),
+        }),
+      }),
+    );
+
+    const error = await provider
+      .publish(creds, {
+        text: 'Broken',
+        idempotencyKey: 'k',
+        media: [video],
+        options: null,
+      })
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(PlatformApiError);
+    expect(error).toMatchObject({
+      message: 'Bluesky couldn’t process this video. Try a different MP4 file.',
+      retryable: false,
+    });
+    expect(calls.map(path)).not.toContain('com.atproto.repo.createRecord');
+  });
+
+  it('says so when the account can’t upload videos today', async () => {
+    const { provider } = setup();
+    const { calls } = mockFetch(
+      mediaRoutes({
+        [`GET ${VIDEO}/app.bsky.video.getUploadLimits`]: () => ({
+          body: {
+            canUpload: false,
+            remainingDailyVideos: 0,
+            message: 'You have exceeded the daily limit',
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      provider.publish(creds, {
+        text: 'One more',
+        idempotencyKey: 'k',
+        media: [video],
+        options: null,
+      }),
+    ).rejects.toMatchObject({
+      message:
+        'This Bluesky account has reached its daily video limit. Try again tomorrow.',
+      retryable: false,
+    });
+    expect(calls.map(path)).not.toContain('app.bsky.video.uploadVideo');
   });
 
   it('reads engagement with getPosts in batches of 25', async () => {

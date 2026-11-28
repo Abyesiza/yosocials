@@ -46,6 +46,7 @@ let blueskyId: string;
 let mastodonStatus = 200;
 let mastodonCounter = 0;
 let blueskyCounter = 0;
+let mastodonMediaChecks = 0;
 
 function stubPlatforms() {
   return mockFetch({
@@ -86,6 +87,28 @@ function stubPlatforms() {
         favourites_count: 7,
         reblogs_count: 3,
         replies_count: 2,
+      },
+    }),
+    'GET abysocials.test/media/*': () => ({ raw: 'jpeg-bytes' }),
+    'GET mastodon.social/api/v2/instance': () => ({
+      body: { configuration: { statuses: { max_media_attachments: 4 } } },
+    }),
+    'POST mastodon.social/api/v2/media': () => ({
+      status: 202,
+      body: { id: '501', type: 'image', url: null },
+    }),
+    'GET mastodon.social/api/v1/media/501': () =>
+      ++mastodonMediaChecks < 2
+        ? { status: 206, body: { id: '501', type: 'image', url: null } }
+        : { body: { id: '501', type: 'image', url: 'https://files/501.jpg' } },
+    [`POST ${BSKY}/com.atproto.repo.uploadBlob`]: () => ({
+      body: {
+        blob: {
+          $type: 'blob',
+          ref: { $link: CID.replace('bafyrei', 'bafkrei') },
+          mimeType: 'image/jpeg',
+          size: 10,
+        },
       },
     }),
     [`POST ${BSKY}/com.atproto.server.createSession`]: () => ({
@@ -488,6 +511,58 @@ describe('Aby Socials API', () => {
     expect(t.model.generateJson.mock.lastCall?.[0].system).toMatch(
       /Never make up a link/,
     );
+  });
+
+  it('publishes a photo to Mastodon and Bluesky, waiting for Mastodon to process it', async () => {
+    const reserved = await api
+      .post('/media/uploads')
+      .send({ files: [{ contentType: 'image/jpeg', size: 10 }] })
+      .expect(201);
+    const [path] = reserved.body.customIds as string[];
+    const post = await api
+      .post('/posts')
+      .send({
+        body: 'Our new shop front',
+        media: [
+          {
+            path,
+            contentType: 'image/jpeg',
+            size: 10,
+            width: 1600,
+            height: 900,
+          },
+        ],
+        targets: [{ accountId: mastodonId }, { accountId: blueskyId }],
+      })
+      .expect(201);
+
+    const { calls } = stubPlatforms();
+    const outcomes = await api
+      .post(`/posts/${post.body.id}/publish`)
+      .expect(200);
+    expect(outcomes.body.map((o: { status: string }) => o.status)).toEqual([
+      'published',
+      'published',
+    ]);
+
+    expect(calls.filter((c) => c.url.host === 'abysocials.test')).toHaveLength(
+      2,
+    );
+    expect(mastodonMediaChecks).toBe(2);
+    const status = calls.find((c) => c.url.pathname === '/api/v1/statuses')!;
+    expect(status.body).toMatchObject({
+      status: 'Our new shop front',
+      media_ids: ['501'],
+    });
+    const record = calls.find((c) =>
+      c.url.pathname.endsWith('com.atproto.repo.createRecord'),
+    )!;
+    expect(
+      (record.body as { record: { embed: unknown } }).record.embed,
+    ).toMatchObject({
+      $type: 'app.bsky.embed.images',
+      images: [{ aspectRatio: { width: 1600, height: 900 } }],
+    });
   });
 
   it('rejects malformed model output instead of saving it', async () => {

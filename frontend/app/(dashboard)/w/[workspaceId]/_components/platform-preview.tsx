@@ -3,6 +3,7 @@
 import { Card, cn, PlatformIcon, platformLabel, Textarea } from "@/app/components/ui";
 import type { Account, PlatformInfo } from "@/app/lib/api/types";
 import { graphemes, xWeightedLength } from "@/app/lib/format";
+import { filesFor, MediaGallery, type PreviewMedia } from "./media-gallery";
 
 export function lengthFor(text: string, cap?: PlatformInfo) {
   if (cap?.lengthUnit === "graphemes") return graphemes(text);
@@ -16,6 +17,7 @@ export function PlatformPreview({
   cap,
   text,
   mediaCount = 0,
+  media = [],
   custom,
   onCustomize,
   onReset,
@@ -25,6 +27,7 @@ export function PlatformPreview({
   cap?: PlatformInfo;
   text: string;
   mediaCount?: number;
+  media?: PreviewMedia[];
   custom: boolean;
   onCustomize: () => void;
   onReset: () => void;
@@ -33,6 +36,7 @@ export function PlatformPreview({
   const n = lengthFor(text, cap);
   const over = cap ? n > cap.maxTextLength : false;
   const label = platformLabel(account.platform);
+  const gallery = cap?.media && <MediaGallery files={filesFor(media, account.platform)} platform={account.platform} className="mt-3" />;
   return (
     <Card className={cn("p-4", over && "border-destructive")}>
       <div className="mb-2 flex items-center gap-2 text-sm">
@@ -57,6 +61,7 @@ export function PlatformPreview({
       {custom ? (
         <>
           <Textarea aria-label={`Text for ${label}`} value={text} onChange={(e) => onChange(e.target.value)} rows={4} />
+          {gallery}
           <button type="button" onClick={onReset} className="mt-2 min-h-11 text-xs font-semibold text-muted-foreground hover:text-foreground sm:min-h-0">
             Use the main text instead
           </button>
@@ -66,6 +71,7 @@ export function PlatformPreview({
           <p className="whitespace-pre-wrap text-sm text-foreground">
             {text || <span className="text-muted-foreground">Your text will appear here</span>}
           </p>
+          {gallery}
           <button type="button" onClick={onCustomize} className="mt-2 min-h-11 text-xs font-semibold text-primary hover:underline sm:min-h-0">
             Customise for {label}
           </button>

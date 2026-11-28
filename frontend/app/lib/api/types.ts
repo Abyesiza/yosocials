@@ -55,18 +55,80 @@ export interface PlatformInfo {
   /** False while an OAuth platform's app credentials aren't configured. */
   available: boolean;
   /** null: text only; attached media isn't sent. */
-  media: { required: boolean; video: boolean; maxImages: number } | null;
+  media: MediaCapabilities | null;
+}
+
+/** Width ÷ height. `preferred`: the shape the platform shows best (we frame to it); `min`/`max`: hard limits. */
+export interface AspectSpec {
+  min?: number;
+  max?: number;
+  preferred?: number;
+}
+
+export interface ImageSpec {
+  types: string[];
+  maxBytes: number;
+  maxLongSide: number;
+  maxShortSide: number;
+  maxPixels?: number;
+  /** Most width + height (Telegram). */
+  maxSideSum?: number;
+  aspect?: AspectSpec;
+}
+
+export interface VideoSpec {
+  types: string[];
+  maxBytes: number;
+  minDurationSec?: number;
+  maxDurationSec?: number;
+  /** Video codecs that may go out unchanged (mediabunny names: avc, hevc). */
+  codecs: string[];
+  minShortSide?: number;
+  maxLongSide: number;
+  maxShortSide: number;
+  maxPixels?: number;
+  minFps?: number;
+  maxFps?: number;
+  aspect?: AspectSpec;
+}
+
+/** Mirrors the API's `MediaCapabilities`: the browser prepares a copy of each file that fits these. */
+export interface MediaCapabilities {
+  required: boolean;
+  video: boolean;
+  maxImages: number;
+  imageSpec: ImageSpec | null;
+  videoSpec: VideoSpec | null;
 }
 
 export type MediaContentType = "video/mp4" | "video/quicktime" | "video/webm" | "image/jpeg" | "image/webp";
 
-export interface MediaItem {
+/** The file a platform gets for this item: its own copy, or the original. Mirrors the API's `mediaFor`. */
+export const mediaFor = (media: MediaItem, platform: Platform): MediaFile => media.variants.find((v) => v.platform === platform) ?? media;
+
+/** One stored file: an original, or a copy prepared for one platform. */
+export interface MediaFile {
   path: string;
-  kind: "image" | "video";
   contentType: MediaContentType;
   size: number;
-  durationSec: number | null;
+  width: number | null;
+  height: number | null;
   url: string;
+}
+
+export interface MediaVariant extends MediaFile {
+  platform: Platform;
+}
+
+/**
+ * An attached photo or video. Platforms that can't take the original get
+ * their own copy in `variants`. In a feed item the top-level file is already
+ * the one that account's platform gets.
+ */
+export interface MediaItem extends MediaFile {
+  kind: "image" | "video";
+  durationSec: number | null;
+  variants: MediaVariant[];
 }
 
 export type TikTokPrivacyLevel = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";

@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsEnum,
   IsIn,
   IsInt,
   IsNumber,
@@ -18,9 +19,12 @@ import {
   MEDIA_CONTENT_TYPES,
   MEDIA_PATH_PATTERN,
 } from '../../../common/storage/media-types.js';
+import { Platform } from '../../../common/enums/platform.enum.js';
 
-/** A file uploaded through `POST /media/uploads`, attached to a post. */
-export class MediaItemDto {
+const MAX_SIDE = 16_384;
+
+/** Fields shared by an uploaded original and its prepared copies. */
+class MediaFileDto {
   @ApiProperty({
     example: '<workspaceId>_<uuid>.mp4',
     description: 'UploadThing custom id',
@@ -42,12 +46,47 @@ export class MediaItemDto {
   @Min(1)
   size: number;
 
+  @ApiPropertyOptional({ description: 'Pixels, as measured in the browser' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_SIDE)
+  width?: number;
+
+  @ApiPropertyOptional({ description: 'Pixels, as measured in the browser' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_SIDE)
+  height?: number;
+}
+
+/** A copy of the file prepared to fit one platform. */
+export class MediaVariantDto extends MediaFileDto {
+  @ApiProperty({ enum: Platform })
+  @IsEnum(Platform, { message: 'Prepared copies must name a platform' })
+  platform: Platform;
+}
+
+/** A file uploaded through `POST /media/uploads`, attached to a post. */
+export class MediaItemDto extends MediaFileDto {
   @ApiPropertyOptional({ description: 'Video length in seconds' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(24 * 60 * 60)
   durationSec?: number;
+
+  @ApiPropertyOptional({
+    type: [MediaVariantDto],
+    description: 'Copies sized for platforms that can’t take the original',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(Object.values(Platform).length)
+  @ValidateNested({ each: true })
+  @Type(() => MediaVariantDto)
+  variants?: MediaVariantDto[];
 }
 
 export class UploadFileDto {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { type Client, currentDatetimeString } from '@atproto/lex';
 import type { AtUriString } from '@atproto/syntax';
 import { post } from '@bsky/sdk';
@@ -11,12 +11,15 @@ import type {
   ProviderCapabilities,
   PublishInput,
   PublishResult,
+  ReadinessInput,
   VerifiedAccount,
 } from '../../interfaces/platform-provider.interface.js';
 import { LinkPreviewService } from '../../link-preview/link-preview.service.js';
+import { mediaIssues } from '../../media-spec.js';
 import { parseCredentialsDto } from '../../parse-credentials.js';
 import { BlueskyClientFactory } from './bluesky-client.js';
 import { BlueskyCredentialsDto } from './bluesky-credentials.dto.js';
+import { imagesEmbed, videoEmbed } from './bluesky-media.js';
 
 // getPosts accepts at most 25 URIs per call.
 const GET_POSTS_BATCH = 25;
@@ -38,6 +41,27 @@ export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> 
     contentStyle:
       'Short, conversational text post. Links, @mentions and #hashtags become clickable, and the first link gets a preview card.',
     connect: 'credentials',
+    media: {
+      required: false,
+      video: true,
+      // github.com/bluesky-social/atproto lexicons app/bsky/embed/images.json: 4 images, 2 MB each (checked 2026-11-28).
+      maxImages: 4,
+      // Sides aren't documented; 2048 keeps photos under the 2 MB cap at good quality.
+      imageSpec: {
+        types: ['image/jpeg', 'image/png', 'image/webp'],
+        maxBytes: 2_000_000,
+        maxLongSide: 2048,
+        maxShortSide: 2048,
+      },
+      // app/bsky/embed/video.json and bsky.network/docs/about-bluesky-content/video: MP4 up to 300 MB; sides undocumented, so 4096 is a sanity cap.
+      videoSpec: {
+        types: ['video/mp4'],
+        codecs: ['avc'],
+        maxBytes: 300_000_000,
+        maxLongSide: 4096,
+        maxShortSide: 4096,
+      },
+    },
   };
 
   constructor(
@@ -65,14 +89,35 @@ export class BlueskyProvider implements PlatformProvider<BlueskyCredentialsDto> 
     });
   }
 
+  readinessIssues({ text, media }: ReadinessInput): string[] {
+    return !text.trim() && media.length === 0
+      ? ['write something or attach media.']
+      : [];
+  }
+
   publish(
     credentials: BlueskyCredentialsDto,
     input: PublishInput,
   ): Promise<PublishResult> {
+    const issues = [
+      ...mediaIssues(input.media, this.capabilities.media),
+      ...this.readinessIssues(input),
+    ];
+    if (issues.length > 0)
+      return Promise.reject(
+        new BadRequestException(`To post to Bluesky, ${issues[0]}`),
+      );
+
     return this.clients.withClient(credentials, async (client, session) => {
       const rt = new RichText({ text: input.text });
       await rt.detectFacets(client);
-      const embed = await this.linkCard(client, rt);
+      const video = input.media.find((m) => m.kind === 'video');
+      // A post has one embed: media wins over the link card.
+      const embed = video
+        ? await videoEmbed(client, session, video)
+        : input.media.length > 0
+          ? await imagesEmbed(client, input.media)
+          : await this.linkCard(client, rt);
       const createdAt = currentDatetimeString();
       const { uri } = await client.call(post, {
         text: rt.text,

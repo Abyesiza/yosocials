@@ -24,7 +24,14 @@ import type {
   UpdatePostTargetDto,
 } from './dto/update-post.dto.js';
 import { PostTarget } from './entities/post-target.entity.js';
-import { Post, type PostMedia } from './entities/post.entity.js';
+import {
+  mediaFor,
+  mediaPaths,
+  Post,
+  type MediaVariant,
+  type PostMedia,
+} from './entities/post.entity.js';
+import { mediaIssues } from '../integrations/media-spec.js';
 import { PostSource, TargetStatus } from './enums/post-status.enum.js';
 
 /** Targets in these states can still be edited, scheduled or published. */
@@ -170,11 +177,8 @@ export class PostsService {
     if (dto.media !== undefined) {
       this.assertNotPublishing(post);
       const media = this.toMedia(workspaceId, dto.media);
-      dropped.push(
-        ...post.media
-          .filter((m) => !media.some((n) => n.path === m.path))
-          .map((m) => m.path),
-      );
+      const kept = new Set(mediaPaths(media));
+      dropped.push(...mediaPaths(post.media).filter((p) => !kept.has(p)));
       post.media = media;
     }
     this.assertTextFits(post, this.editable(post));
@@ -282,7 +286,7 @@ export class PostsService {
   async remove(workspaceId: string, id: string): Promise<void> {
     const post = await this.findOne(workspaceId, id);
     this.assertNotPublishing(post);
-    const paths = post.media.map((m) => m.path);
+    const paths = mediaPaths(post.media);
     await this.posts.remove(post);
     await this.storage.remove(paths);
   }
@@ -297,13 +301,19 @@ export class PostsService {
       text: target.effectiveText(post),
       idempotencyKey: target.id,
       options: target.options,
-      media: post.media.map((m) => ({
-        kind: m.kind,
-        url: this.storage.publicUrl(m.path),
-        contentType: m.contentType,
-        size: m.size,
-        durationSec: m.durationSec ?? null,
-      })),
+      // Each platform gets the copy prepared for it, or the original.
+      media: post.media.map((m) => {
+        const file = mediaFor(m, target.account.platform);
+        return {
+          kind: m.kind,
+          url: this.storage.publicUrl(file.path),
+          contentType: file.contentType,
+          size: file.size,
+          durationSec: m.durationSec ?? null,
+          width: file.width ?? null,
+          height: file.height ?? null,
+        };
+      }),
     };
   }
 
@@ -315,9 +325,11 @@ export class PostsService {
     this.assertTextFits(post, targets);
     const problems = targets.flatMap((target) => {
       const provider = this.registry.get(target.account.platform);
-      return (
-        provider.readinessIssues?.(this.publishInput(post, target)) ?? []
-      ).map(
+      const input = this.publishInput(post, target);
+      return [
+        ...mediaIssues(input.media, provider.capabilities.media),
+        ...(provider.readinessIssues?.(input) ?? []),
+      ].map(
         (issue) =>
           `To post to ${target.account.handle} on ${provider.displayName}, ${issue}`,
       );
@@ -373,9 +385,39 @@ export class PostsService {
         kind,
         contentType: m.contentType,
         size: m.size,
+        width: m.width ?? null,
+        height: m.height ?? null,
         durationSec: kind === 'video' ? (m.durationSec ?? null) : null,
+        variants: (m.variants ?? []).map((v): MediaVariant => {
+          if (!v.path.startsWith(`${workspaceId}_`)) {
+            throw new BadRequestException(
+              'That file belongs to another workspace. Upload it here, then attach it.',
+            );
+          }
+          if (MEDIA_TYPES[v.contentType].kind !== kind) {
+            throw new BadRequestException(
+              'A prepared copy must be the same kind of media as the original.',
+            );
+          }
+          return {
+            platform: v.platform,
+            path: v.path,
+            contentType: v.contentType,
+            size: v.size,
+            width: v.width ?? null,
+            height: v.height ?? null,
+          };
+        }),
       };
     });
+    for (const m of media) {
+      const platforms = m.variants!.map((v) => v.platform);
+      if (new Set(platforms).size !== platforms.length) {
+        throw new BadRequestException(
+          'A file has two copies for the same platform. Remove the media and add it again.',
+        );
+      }
+    }
     if (new Set(media.map((m) => m.path)).size !== media.length) {
       throw new BadRequestException(
         'The same file is attached twice. Remove one copy.',

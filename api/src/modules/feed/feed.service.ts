@@ -92,8 +92,13 @@ export class FeedService {
     return Object.assign(PostTargetResponseDto.from(target, target.post), {
       postId: target.post.id,
       postTitle: target.post.title,
+      // What this account's platform gets: its own copy, or the original.
       media: target.post.media.map((m) =>
-        PostMediaResponseDto.from(m, this.storage.publicUrl(m.path)),
+        PostMediaResponseDto.from(
+          m,
+          (path) => this.storage.publicUrl(path),
+          target.account.platform,
+        ),
       ),
     });
   }

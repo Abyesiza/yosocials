@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { LuExternalLink } from "react-icons/lu";
 import { Avatar, Button, Card, Input, PlatformIcon, platformLabel, StatusBadge, Textarea } from "@/app/components/ui";
-import type { PostTarget, TikTokOptions } from "@/app/lib/api/types";
+import type { MediaItem, PostTarget, TikTokOptions } from "@/app/lib/api/types";
 import { compact, dateTime, toLocalInput } from "@/app/lib/format";
 import { EngagementHistory } from "./engagement-history";
+import { filesFor, MediaGallery, useTakesMedia } from "./media-gallery";
 import { describeTikTok, TikTokSettings, useDisclosure, type MediaSummary } from "./tiktok-settings";
 
 export const EDITABLE = ["draft", "scheduled", "failed"];
@@ -23,12 +24,14 @@ export function TargetCard({
   saving,
   onSave,
   media,
+  postMedia,
 }: {
   target: PostTarget;
   editable: boolean;
   saving: boolean;
   onSave: (changes: { text?: string; scheduledAt?: string | null; options?: TikTokOptions }) => void;
   media: MediaSummary;
+  postMedia: MediaItem[];
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(target.text);
@@ -38,6 +41,7 @@ export function TargetCard({
   const tiktok = target.account.platform === "tiktok";
   const [when, setWhen] = useState(target.scheduledAt ? toLocalInput(new Date(target.scheduledAt)) : "");
   const { account, metrics } = target;
+  const takesMedia = useTakesMedia(account.platform);
 
   return (
     <Card className="p-5">
@@ -72,6 +76,7 @@ export function TargetCard({
       ) : (
         <p className="whitespace-pre-wrap text-[15px] leading-6 text-foreground">{target.text}</p>
       )}
+      {takesMedia && <MediaGallery files={filesFor(postMedia, account.platform)} platform={account.platform} className="mt-3" />}
       {tiktok && !editing && <p className="mt-3 text-xs text-muted-foreground">{describeTikTok(saved)}</p>}
       {target.lastError && (
         <p className={`mt-3 text-xs ${target.status === "processing" ? "text-warning" : "text-destructive"}`}>{target.lastError}</p>

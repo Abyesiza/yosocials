@@ -6,8 +6,8 @@ import { apiMessage } from "@/app/lib/server/oauth";
 
 const f = createUploadthing();
 
-// Limits mirror the API (common/storage/media-types.ts) and TikTok's: one video, or up to 35 photos.
-const video = { maxFileSize: "512MB", maxFileCount: 1 } as const;
+// Limits mirror the API (common/storage/media-types.ts): a video with its copies prepared for each platform, or up to 35 photos.
+const video = { maxFileSize: "512MB", maxFileCount: 8 } as const;
 const image = { maxFileSize: "16MB", maxFileCount: 35 } as const;
 
 export const uploadRouter = {

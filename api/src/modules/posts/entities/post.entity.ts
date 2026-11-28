@@ -8,6 +8,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity.js';
+import type { Platform } from '../../../common/enums/platform.enum.js';
 import type { MediaKind } from '../../integrations/interfaces/platform-provider.interface.js';
 import { User } from '../../users/entities/user.entity.js';
 import { Workspace } from '../../workspaces/entities/workspace.entity.js';
@@ -18,15 +19,46 @@ import { PostTarget } from './post-target.entity.js';
  * One piece of content. It is published to one or more accounts through its
  * targets, each of which can have its own text and time.
  */
-/** An uploaded file attached to a post, stored in the media bucket. */
-export interface PostMedia {
-  /** Object path in the bucket: `<workspaceId>/<uuid>.<ext>`. */
+/** One stored file: the original, or a copy prepared for a platform. */
+export interface MediaFile {
+  /** UploadThing custom id: `<workspaceId>_<uuid>.<ext>`. */
   path: string;
-  kind: MediaKind;
   contentType: string;
   size: number;
+  /** Measured in the browser; null on media attached before they were recorded. */
+  width?: number | null;
+  height?: number | null;
+}
+
+/** A copy of a media item sized and framed for one platform. */
+export interface MediaVariant extends MediaFile {
+  platform: Platform;
+}
+
+/**
+ * An uploaded file attached to a post. Platforms that can't take the original
+ * as it is get their own copy in `variants` (shared paths where they need
+ * the same one).
+ */
+export interface PostMedia extends MediaFile {
+  kind: MediaKind;
   /** Reported by the browser for videos; platforms with length limits check it. */
   durationSec?: number | null;
+  variants?: MediaVariant[];
+}
+
+/** The file a platform gets for this item: its own copy, or the original. */
+export function mediaFor(media: PostMedia, platform: Platform): MediaFile {
+  return media.variants?.find((v) => v.platform === platform) ?? media;
+}
+
+/** Every stored file of these items, originals and copies, once each. */
+export function mediaPaths(media: PostMedia[]): string[] {
+  return [
+    ...new Set(
+      media.flatMap((m) => [m.path, ...(m.variants ?? []).map((v) => v.path)]),
+    ),
+  ];
 }
 
 @Entity('posts')

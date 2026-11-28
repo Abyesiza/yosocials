@@ -11,6 +11,7 @@ import type {
   ReadinessInput,
   VerifiedAccount,
 } from '../../interfaces/platform-provider.interface.js';
+import { mediaIssues } from '../../media-spec.js';
 import { LinkedInApi } from './linkedin-api.js';
 import { LinkedInMediaUploader } from './linkedin-media.js';
 import { toLittleText } from './linkedin-text.js';
@@ -25,10 +26,6 @@ export interface LinkedInCredentials {
 }
 
 const MAX_IMAGES = 20;
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
-const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
-const MIN_VIDEO_SEC = 3;
-const MAX_VIDEO_SEC = 30 * 60;
 const POST_URN = /^urn:li:(share|ugcPost):\d+$/;
 const ANALYTICS_SCOPE = 'r_member_postAnalytics';
 const METRICS: LinkedInMetricType[] = [
@@ -51,7 +48,33 @@ export class LinkedInProvider implements PlatformProvider<LinkedInCredentials> {
     contentStyle:
       'A professional post for LinkedIn: a strong first line (only about 200 characters show before “see more”), short paragraphs, a clear takeaway or question, and 3 to 5 #hashtags at the end.',
     connect: 'oauth',
-    media: { required: false, video: true, maxImages: MAX_IMAGES },
+    // Images, Videos and MultiImage APIs, and LinkedIn Help a548372 (organic video), checked 2026-11-28.
+    media: {
+      required: false,
+      video: true,
+      maxImages: MAX_IMAGES,
+      imageSpec: {
+        types: ['image/jpeg', 'image/png', 'image/gif'],
+        maxBytes: 16 * 1024 * 1024,
+        maxLongSide: 8192,
+        maxShortSide: 8192,
+        maxPixels: 36_152_319,
+      },
+      videoSpec: {
+        types: ['video/mp4'],
+        codecs: ['avc'],
+        maxBytes: 500 * 1024 * 1024,
+        minDurationSec: 3,
+        // The API allows 30 minutes, but LinkedIn Help says 15 for organic posts.
+        maxDurationSec: 15 * 60,
+        maxLongSide: 4096,
+        maxShortSide: 2304,
+        minShortSide: 144,
+        minFps: 10,
+        maxFps: 60,
+        aspect: { min: 1 / 2.4, max: 2.4 },
+      },
+    },
   };
 
   readonly oauth: OAuthConnector;
@@ -94,27 +117,6 @@ export class LinkedInProvider implements PlatformProvider<LinkedInCredentials> {
     const issues: string[] = [];
     if (!text.trim() && media.length === 0)
       issues.push('write something or attach media.');
-    const images = media.filter((m) => m.kind === 'image');
-    const video = media.find((m) => m.kind === 'video');
-    if (images.length > MAX_IMAGES)
-      issues.push(`LinkedIn takes up to ${MAX_IMAGES} photos in a post.`);
-    if (images.some((m) => !IMAGE_TYPES.includes(m.contentType))) {
-      issues.push(
-        'LinkedIn takes JPEG, PNG or GIF photos. Replace the WebP photos.',
-      );
-    }
-    if (video) {
-      if (video.contentType !== 'video/mp4')
-        issues.push('LinkedIn takes MP4 videos only.');
-      if (video.size > MAX_VIDEO_BYTES)
-        issues.push('LinkedIn takes videos up to 500 MB.');
-      const sec = video.durationSec;
-      if (sec && (sec < MIN_VIDEO_SEC || sec > MAX_VIDEO_SEC)) {
-        issues.push(
-          'LinkedIn videos must be between 3 seconds and 30 minutes long.',
-        );
-      }
-    }
     return issues;
   }
 
@@ -122,7 +124,10 @@ export class LinkedInProvider implements PlatformProvider<LinkedInCredentials> {
     { memberId }: LinkedInCredentials,
     input: PublishInput,
   ): Promise<PublishResult> {
-    const issues = this.readinessIssues(input);
+    const issues = [
+      ...mediaIssues(input.media, this.capabilities.media),
+      ...this.readinessIssues(input),
+    ];
     if (issues.length > 0)
       throw new BadRequestException(`To post to LinkedIn, ${issues[0]}`);
 

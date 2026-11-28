@@ -7,7 +7,7 @@ import { LuArrowLeft } from "react-icons/lu";
 import { Button, Card, CardHeader, EmptyState, ErrorNote, PageHeader, StatusBadge } from "@/app/components/ui";
 import { FeedSkeleton, PageHeaderSkeleton } from "@/app/components/skeletons";
 import { api, useApi } from "@/app/lib/api/client";
-import type { Post, PublishOutcome } from "@/app/lib/api/types";
+import type { PlatformInfo, Post, PublishOutcome } from "@/app/lib/api/types";
 import { dateTime } from "@/app/lib/format";
 import { MediaPicker, toMediaBody, type DraftMedia } from "./media-picker";
 import { EDITABLE, TargetCard } from "./target-card";
@@ -18,6 +18,7 @@ export function PostView() {
   const { base, href, can } = useWorkspace();
   const router = useRouter();
   const { data: post, error, mutate } = useApi<Post>(`${base}/posts/${postId}`);
+  const { data: caps } = useApi<PlatformInfo[]>("/integrations");
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<unknown>(null);
   const processing = post?.targets.some((t) => t.status === "processing") ?? false;
@@ -68,7 +69,9 @@ export function PostView() {
   const unpublished = post.targets.some((t) => EDITABLE.includes(t.status));
   const summary = { kind: post.media[0]?.kind ?? null, durationSec: post.media[0]?.durationSec ?? null };
   const mediaEditable = editor && post.targets.every((t) => EDITABLE.includes(t.status));
-  const saveMedia = (media: DraftMedia[]) => run("media", () => api(`${base}/posts/${post.id}`, { method: "PATCH", body: { media: toMediaBody(media) } }));
+  const postPlatforms = [...new Set(post.targets.map((t) => t.account.platform))];
+  const platformCaps = (caps ?? []).filter((c) => postPlatforms.includes(c.platform));
+  const saveMedia = (media: DraftMedia[]) => run("media", () => api(`${base}/posts/${post.id}`, { method: "PATCH", body: { media: toMediaBody(media, postPlatforms) } }));
 
   return (
     <div>
@@ -78,7 +81,7 @@ export function PostView() {
         <div className="grid content-start gap-4 lg:grid-cols-2">
           {(post.media.length > 0 || mediaEditable) && (
             <div className="lg:col-span-2">
-              <MediaPicker media={post.media} onChange={saveMedia} disabled={!mediaEditable || busy === "media"} />
+              <MediaPicker media={post.media} onChange={saveMedia} platforms={platformCaps} disabled={!mediaEditable || busy === "media" || !caps} />
             </div>
           )}
           {post.targets.map((t) => (
@@ -88,6 +91,7 @@ export function PostView() {
               editable={editor && EDITABLE.includes(t.status)}
               saving={busy === `save-${t.id}`}
               media={summary}
+              postMedia={post.media}
               onSave={(changes) => run(`save-${t.id}`, () => api(`${base}/posts/${post.id}/targets/${t.id}`, { method: "PATCH", body: changes }))}
             />
           ))}

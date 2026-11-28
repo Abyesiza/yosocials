@@ -6,11 +6,13 @@ import { LuExternalLink, LuHeart, LuMessageCircle, LuQuote, LuRepeat2 } from "re
 import { Avatar, Card, cn, focusRing, PlatformIcon, platformLabel, StatusBadge } from "@/app/components/ui";
 import type { FeedItem } from "@/app/lib/api/types";
 import { compact, timeAgo } from "@/app/lib/format";
+import { MediaGallery, useTakesMedia } from "./media-gallery";
 import { useWorkspace } from "./workspace-context";
 
 export function PostCard({ item }: { item: FeedItem }) {
   const { href } = useWorkspace();
   const { account, metrics } = item;
+  const takesMedia = useTakesMedia(account.platform);
 
   return (
     <Card className="flex flex-col p-5 transition-shadow hover:shadow-md">
@@ -39,6 +41,7 @@ export function PostCard({ item }: { item: FeedItem }) {
           {item.text}
         </p>
       </Link>
+      {takesMedia && <MediaGallery files={item.media} platform={account.platform} className="mt-3" />}
 
       {item.status === "published" && (
         <footer className="mt-4 flex items-center gap-5 border-t border-border pt-3 text-sm text-foreground">

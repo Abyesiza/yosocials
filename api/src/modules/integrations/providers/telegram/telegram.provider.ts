@@ -1,14 +1,22 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Platform } from '../../../../common/enums/platform.enum.js';
-import { requestJson } from '../../../../common/http/http-client.js';
+import {
+  PlatformApiError,
+  requestJson,
+} from '../../../../common/http/http-client.js';
+import { textLength } from '../../../../common/text/text-length.js';
 import type {
   PlatformProvider,
   ProviderCapabilities,
   PublishInput,
+  PublishMedia,
   PublishResult,
+  ReadinessInput,
   VerifiedAccount,
 } from '../../interfaces/platform-provider.interface.js';
+import { mediaIssues } from '../../media-spec.js';
 import { parseCredentialsDto } from '../../parse-credentials.js';
+import { downloadMedia, mediaFilename } from '../media-download.js';
 import { TelegramCredentialsDto } from './telegram-credentials.dto.js';
 import type {
   TelegramChat,
@@ -17,6 +25,11 @@ import type {
   TelegramResponse,
   TelegramUser,
 } from './telegram.types.js';
+
+/** A caption is shorter than a text message (core.telegram.org/bots/api#sendphoto). */
+const MAX_CAPTION = 1024;
+/** Up to 50 MB of video going up in one request. */
+const UPLOAD_TIMEOUT_MS = 5 * 60_000;
 
 /**
  * Telegram channels via the Bot API. The Bot API can't read a channel post's
@@ -34,6 +47,29 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
     contentStyle:
       'Channel broadcast message. Can be longer and more detailed; emojis and short paragraphs work well.',
     connect: 'credentials',
+    // Uploaded as multipart: core.telegram.org/bots/api#sending-files (Bot API 10.5, checked 2026-11-28).
+    media: {
+      required: false,
+      video: true,
+      maxImages: 10,
+      // core.telegram.org/bots/api#sendphoto: 10 MB, width + height ≤ 10000, ratio ≤ 20. Telegram recompresses photos.
+      imageSpec: {
+        types: ['image/jpeg', 'image/png', 'image/webp'],
+        maxBytes: 10_000_000,
+        maxLongSide: 10000,
+        maxShortSide: 10000,
+        maxSideSum: 10000,
+        aspect: { min: 1 / 20, max: 20 },
+      },
+      // core.telegram.org/bots/api#sendvideo: MPEG4 up to 50 MB; sides are undocumented, so 4096 is a sanity cap.
+      videoSpec: {
+        types: ['video/mp4'],
+        codecs: ['avc'],
+        maxBytes: 50_000_000,
+        maxLongSide: 4096,
+        maxShortSide: 4096,
+      },
+    },
   };
 
   parseCredentials(raw: unknown): Promise<TelegramCredentialsDto> {
@@ -68,15 +104,39 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
     };
   }
 
+  readinessIssues({ text, media }: ReadinessInput): string[] {
+    const issues: string[] = [];
+    if (!text.trim() && media.length === 0)
+      issues.push('write something or attach media.');
+    if (
+      media.length > 0 &&
+      textLength(text, this.capabilities.lengthUnit) > MAX_CAPTION
+    ) {
+      issues.push(
+        'keep the text to 1,024 characters when posting photos or videos to Telegram, or remove the media.',
+      );
+    }
+    return issues;
+  }
+
   async publish(
     credentials: TelegramCredentialsDto,
     input: PublishInput,
   ): Promise<PublishResult> {
-    const message = await this.call<TelegramMessage>(
-      credentials,
-      'sendMessage',
-      { chat_id: credentials.chatId, text: input.text },
-    );
+    const issues = [
+      ...mediaIssues(input.media, this.capabilities.media),
+      ...this.readinessIssues(input),
+    ];
+    if (issues.length > 0)
+      throw new BadRequestException(`To post to Telegram, ${issues[0]}`);
+
+    const message =
+      input.media.length === 0
+        ? await this.call<TelegramMessage>(credentials, 'sendMessage', {
+            chat_id: credentials.chatId,
+            text: input.text,
+          })
+        : await this.sendMedia(credentials, input);
     return {
       externalId: `${message.chat.id}:${message.message_id}`,
       externalUrl: message.chat.username
@@ -86,15 +146,81 @@ export class TelegramProvider implements PlatformProvider<TelegramCredentialsDto
     };
   }
 
+  /** Sends the files' bytes, not their URLs: by URL Telegram takes only 5 MB photos and 20 MB files. */
+  private async sendMedia(
+    credentials: TelegramCredentialsDto,
+    { text, media }: PublishInput,
+  ): Promise<TelegramMessage> {
+    const files = await Promise.all(
+      media.map((item) => downloadMedia(item, 'Telegram')),
+    );
+    const form = new FormData();
+    form.append('chat_id', credentials.chatId);
+    const caption = text.trim() ? text : undefined;
+    try {
+      if (media.length > 1) {
+        // The caption on the first item is shown for the whole album.
+        const items = media.map((_, i) => ({
+          type: 'photo',
+          media: `attach://photo${i}`,
+          ...(i === 0 && caption && { caption }),
+        }));
+        form.append('media', JSON.stringify(items));
+        files.forEach((file, i) =>
+          form.append(`photo${i}`, file, mediaFilename(media[i])),
+        );
+        const messages = await this.call<TelegramMessage[]>(
+          credentials,
+          'sendMediaGroup',
+          form,
+        );
+        return messages[0];
+      }
+      if (caption) form.append('caption', caption);
+      const [item] = media;
+      if (item.kind === 'image') {
+        form.append('photo', files[0], mediaFilename(item));
+        return await this.call<TelegramMessage>(credentials, 'sendPhoto', form);
+      }
+      appendVideoDetails(form, item);
+      form.append('video', files[0], mediaFilename(item));
+      return await this.call<TelegramMessage>(credentials, 'sendVideo', form);
+    } catch (error) {
+      // Telegram has no idempotency keys: an upload that timed out may have landed.
+      if (error instanceof PlatformApiError && error.status === 0) {
+        throw new PlatformApiError(
+          'We lost contact with Telegram while sending this. It may have been posted, so check the channel before you try again.',
+          0,
+          false,
+        );
+      }
+      throw error;
+    }
+  }
+
   private async call<T>(
     credentials: TelegramCredentialsDto,
     method: string,
-    params?: Record<string, unknown>,
+    params: Record<string, unknown> | FormData = {},
   ): Promise<T> {
     const response = await requestJson<TelegramResponse<T>>(
       `https://api.telegram.org/bot${credentials.botToken}/${method}`,
-      { json: params ?? {} },
+      params instanceof FormData
+        ? { multipart: params, timeoutMs: UPLOAD_TIMEOUT_MS }
+        : { json: params },
     );
     return response.result;
   }
+}
+
+/** So Telegram shows the video in its shape and can play it while it loads. */
+function appendVideoDetails(form: FormData, item: PublishMedia): void {
+  if (item.width && item.height) {
+    form.append('width', String(item.width));
+    form.append('height', String(item.height));
+  }
+  if (item.durationSec) {
+    form.append('duration', String(Math.round(item.durationSec)));
+  }
+  form.append('supports_streaming', 'true');
 }

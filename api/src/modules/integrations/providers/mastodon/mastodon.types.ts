@@ -20,3 +20,23 @@ export interface MastodonStatus {
   /** Mastodon 4.4+ only. */
   quotes_count?: number;
 }
+
+/** POST /api/v2/media, GET /api/v1/media/:id. `url` is null while the server is still processing. */
+export interface MastodonMediaAttachment {
+  id: string;
+  type: string;
+  url: string | null;
+}
+
+/** GET /api/v2/instance: the parts that limit media. */
+export interface MastodonInstance {
+  configuration?: {
+    statuses?: { max_media_attachments?: number };
+    media_attachments?: {
+      image_size_limit?: number;
+      image_matrix_limit?: number;
+      video_size_limit?: number;
+      video_matrix_limit?: number;
+    };
+  };
+}

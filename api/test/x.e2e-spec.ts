@@ -264,6 +264,109 @@ describe('X', () => {
     await make('日'.repeat(141)).expect(400);
   });
 
+  it('sends X the copy prepared for it, and shows that copy in the feed', async () => {
+    const original = await upload('image/jpeg');
+    const copy = await upload('image/jpeg');
+    const post = await api
+      .post('/posts')
+      .send({
+        body: 'Prepared for X',
+        media: [
+          {
+            ...original,
+            width: 4000,
+            height: 6000,
+            variants: [
+              {
+                platform: 'x',
+                path: copy.path,
+                contentType: 'image/jpeg',
+                size: copy.size,
+                width: 1365,
+                height: 2048,
+              },
+            ],
+          },
+        ],
+        targets: [{ accountId: xId }],
+      })
+      .expect(201);
+    expect(post.body.media[0].variants).toEqual([
+      expect.objectContaining({
+        platform: 'x',
+        path: copy.path,
+        width: 1365,
+        height: 2048,
+      }),
+    ]);
+
+    await api.post(`/posts/${post.body.id}/publish`).expect(200);
+    const downloads = calls.filter((c) => c.url.host === 'abysocials.test');
+    expect(downloads.map((c) => c.url.pathname)).toEqual([
+      `/media/${copy.path}`,
+    ]);
+
+    const feed = (await api.get('/feed')).body;
+    const item = (feed.items ?? feed).find(
+      (i: { postId: string }) => i.postId === post.body.id,
+    );
+    expect(item.media[0]).toMatchObject({
+      path: copy.path,
+      width: 1365,
+      height: 2048,
+    });
+
+    calls.length = 0;
+    await api.delete(`/posts/${post.body.id}`).expect(204);
+    const deleted = calls.find((c) => c.url.pathname === '/v6/deleteFiles')!;
+    expect((deleted.body as { customIds: string[] }).customIds.sort()).toEqual(
+      [original.path, copy.path].sort(),
+    );
+  });
+
+  it('refuses a prepared copy from another workspace', async () => {
+    const original = await upload('image/jpeg');
+    const foreign = original.path.replace(
+      /^[0-9a-f-]{36}/,
+      crypto.randomUUID(),
+    );
+    await api
+      .post('/posts')
+      .send({
+        body: 'Sneaky',
+        media: [
+          {
+            ...original,
+            variants: [
+              {
+                platform: 'x',
+                path: foreign,
+                contentType: 'image/jpeg',
+                size: 10,
+              },
+            ],
+          },
+        ],
+        targets: [{ accountId: xId }],
+      })
+      .expect(400);
+  });
+
+  it('blocks publishing when the copy X gets breaks its limits', async () => {
+    const original = await upload('image/jpeg', 6_000_000);
+    const post = await api
+      .post('/posts')
+      .send({
+        body: 'Too big',
+        media: [{ ...original, width: 3000, height: 2000 }],
+        targets: [{ accountId: xId }],
+      })
+      .expect(201);
+    const res = await api.post(`/posts/${post.body.id}/publish`).expect(400);
+    expect(JSON.stringify(res.body)).toMatch(/photos up to 5 MB/);
+    expect(sent(`${X}/2/tweets`)).toHaveLength(0);
+  });
+
   it('publishes text with photos uploaded to X', async () => {
     const photo = await upload('image/jpeg');
     const { outcome } = await publish('Hello from Aby Socials', [photo]);

@@ -80,7 +80,33 @@ export class TikTokProvider implements PlatformProvider<TikTokCredentials> {
     contentStyle:
       'Caption for a short vertical video or photo carousel. Hook in the first line, a short call to action, then 3 to 5 relevant #hashtags. The video or photos carry the post; the caption supports them.',
     connect: 'oauth',
-    media: { required: true, video: true, maxImages: MAX_IMAGES },
+    // developers.tiktok.com/doc/content-posting-api-media-transfer-guide (checked 2026-11-28).
+    media: {
+      required: true,
+      video: true,
+      maxImages: MAX_IMAGES,
+      imageSpec: {
+        types: ['image/jpeg', 'image/webp'],
+        maxBytes: 16 * 1024 * 1024,
+        // “Maximum 1080p”.
+        maxLongSide: 1920,
+        maxShortSide: 1080,
+        aspect: { preferred: 9 / 16 },
+      },
+      videoSpec: {
+        types: ['video/mp4', 'video/quicktime', 'video/webm'],
+        codecs: ['avc', 'hevc', 'vp8', 'vp9'],
+        maxBytes: 512 * 1024 * 1024,
+        // Each creator's own cap comes from creator info when posting.
+        maxDurationSec: 10 * 60,
+        maxLongSide: 4096,
+        maxShortSide: 4096,
+        minShortSide: 360,
+        minFps: 23,
+        maxFps: 60,
+        aspect: { preferred: 9 / 16 },
+      },
+    },
   };
 
   readonly oauth: OAuthConnector;

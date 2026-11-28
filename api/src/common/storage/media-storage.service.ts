@@ -8,7 +8,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { UTApi } from 'uploadthing/server';
 import type { EnvironmentVariables } from '../../config/env.validation.js';
-import { MAX_BYTES, MAX_IMAGES, MEDIA_TYPES } from './media-types.js';
+import {
+  MAX_BYTES,
+  MAX_IMAGES,
+  MAX_VIDEO_COPIES,
+  MEDIA_TYPES,
+} from './media-types.js';
 
 export interface UploadRequest {
   contentType: string;
@@ -68,9 +73,15 @@ export class MediaStorageService {
       }
       return type.kind;
     });
-    if (kinds.includes('video') && kinds.length > 1) {
+    const videos = kinds.filter((k) => k === 'video').length;
+    if (videos > 0 && videos < kinds.length) {
       throw new BadRequestException(
         'Upload one video, or photos only. Videos and photos can’t be mixed.',
+      );
+    }
+    if (videos > MAX_VIDEO_COPIES) {
+      throw new BadRequestException(
+        `Upload up to ${MAX_VIDEO_COPIES} videos at a time.`,
       );
     }
     if (kinds.length > MAX_IMAGES) {

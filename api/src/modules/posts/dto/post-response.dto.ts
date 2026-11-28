@@ -1,7 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Platform } from '../../../common/enums/platform.enum.js';
 import type { PostTarget } from '../entities/post-target.entity.js';
-import type { Post, PostMedia } from '../entities/post.entity.js';
+import {
+  mediaFor,
+  type MediaFile,
+  type Post,
+  type PostMedia,
+} from '../entities/post.entity.js';
 import {
   derivePostStatus,
   PostSource,
@@ -26,22 +31,60 @@ export class TargetMetricsDto {
   @ApiPropertyOptional({ nullable: true }) updatedAt: Date | null;
 }
 
-export class PostMediaResponseDto {
+export class MediaFileResponseDto {
   @ApiProperty() path: string;
-  @ApiProperty({ enum: ['image', 'video'] }) kind: 'image' | 'video';
   @ApiProperty() contentType: string;
   @ApiProperty() size: number;
-  @ApiPropertyOptional({ nullable: true }) durationSec: number | null;
+  @ApiPropertyOptional({ nullable: true }) width: number | null;
+  @ApiPropertyOptional({ nullable: true }) height: number | null;
   @ApiProperty({ description: 'Public URL' }) url: string;
 
-  static from(media: PostMedia, url: string): PostMediaResponseDto {
+  static fromFile(
+    file: MediaFile,
+    url: string,
+  ): Pick<MediaFileResponseDto, keyof MediaFileResponseDto> {
     return {
-      path: media.path,
-      kind: media.kind,
-      contentType: media.contentType,
-      size: media.size,
-      durationSec: media.durationSec ?? null,
+      path: file.path,
+      contentType: file.contentType,
+      size: file.size,
+      width: file.width ?? null,
+      height: file.height ?? null,
       url,
+    };
+  }
+}
+
+export class MediaVariantResponseDto extends MediaFileResponseDto {
+  @ApiProperty({ enum: Platform }) platform: Platform;
+}
+
+export class PostMediaResponseDto extends MediaFileResponseDto {
+  @ApiProperty({ enum: ['image', 'video'] }) kind: 'image' | 'video';
+  @ApiPropertyOptional({ nullable: true }) durationSec: number | null;
+  @ApiProperty({
+    type: [MediaVariantResponseDto],
+    description: 'Copies prepared for platforms that can’t take the original',
+  })
+  variants: MediaVariantResponseDto[];
+
+  /**
+   * With `platform`, the top-level file is what that platform gets (its own
+   * copy, or the original), as shown in a feed of that account's posts.
+   */
+  static from(
+    media: PostMedia,
+    mediaUrl: (path: string) => string,
+    platform?: Platform,
+  ): PostMediaResponseDto {
+    const file = platform ? mediaFor(media, platform) : media;
+    return {
+      ...MediaFileResponseDto.fromFile(file, mediaUrl(file.path)),
+      kind: media.kind,
+      durationSec: media.durationSec ?? null,
+      variants: (media.variants ?? []).map((v) => ({
+        ...MediaFileResponseDto.fromFile(v, mediaUrl(v.path)),
+        platform: v.platform,
+      })),
     };
   }
 }
@@ -120,9 +163,7 @@ export class PostResponseDto {
       id: post.id,
       title: post.title,
       body: post.body,
-      media: post.media.map((m) =>
-        PostMediaResponseDto.from(m, mediaUrl(m.path)),
-      ),
+      media: post.media.map((m) => PostMediaResponseDto.from(m, mediaUrl)),
       source: post.source,
       status: derivePostStatus(targets.map((t) => t.status)),
       targets: targets.map((t) => PostTargetResponseDto.from(t, post)),

@@ -25,6 +25,53 @@ export interface MediaCapabilities {
   video: boolean;
   /** Most images in one post; 0 when images aren't supported. */
   maxImages: number;
+  /** What a photo must be. The web app makes a copy that fits; publishing checks it. */
+  imageSpec: ImageSpec | null;
+  /** What a video must be. Absent when `video` is false. */
+  videoSpec: VideoSpec | null;
+}
+
+/**
+ * Width ÷ height. `preferred` is the shape the platform shows best (TikTok's
+ * 9:16): the web app frames media to it, as the person chooses. `min`/`max`
+ * are hard limits.
+ */
+export interface AspectSpec {
+  min?: number;
+  max?: number;
+  preferred?: number;
+}
+
+export interface ImageSpec {
+  types: string[];
+  maxBytes: number;
+  /** Longest side, either orientation. */
+  maxLongSide: number;
+  /** Shortest side, either orientation. */
+  maxShortSide: number;
+  /** Most width × height, where the platform limits it separately. */
+  maxPixels?: number;
+  /** Most width + height (Telegram). */
+  maxSideSum?: number;
+  aspect?: AspectSpec;
+}
+
+export interface VideoSpec {
+  types: string[];
+  maxBytes: number;
+  minDurationSec?: number;
+  maxDurationSec?: number;
+  /** Video codecs the browser may hand over unchanged (mediabunny names: avc, hevc). */
+  codecs: string[];
+  /** Shortest side must be at least this. */
+  minShortSide?: number;
+  maxLongSide: number;
+  maxShortSide: number;
+  /** Most width × height (Mastodon's matrix limit). */
+  maxPixels?: number;
+  minFps?: number;
+  maxFps?: number;
+  aspect?: AspectSpec;
 }
 
 export type MediaKind = 'image' | 'video';
@@ -37,6 +84,9 @@ export interface PublishMedia {
   contentType: string;
   size: number;
   durationSec?: number | null;
+  /** Unknown (null) for media attached before dimensions were recorded. */
+  width?: number | null;
+  height?: number | null;
 }
 
 /** Public, non-secret details of the account the credentials belong to. */

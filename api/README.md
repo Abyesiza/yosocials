@@ -88,13 +88,22 @@ Target lifecycle: `draft → scheduled → publishing → published | failed`. P
 
 | Platform | Credentials | Metrics |
 | --- | --- | --- |
-| Bluesky | handle + app password, via the official SDK (see below) | likes, reposts, replies, quotes |
-| Mastodon | instance URL + access token (`read:accounts read:statuses write:statuses`) | favourites, boosts, replies |
-| Telegram | bot token + channel; the bot must be an admin that can post | none (the Bot API can't read view counts) |
-| Discord | channel webhook URL | reaction count |
+| Bluesky | handle + app password, via the official SDK (see below); text, up to 4 photos or 1 MP4 video | likes, reposts, replies, quotes |
+| Mastodon | instance URL + access token (`read:accounts read:statuses write:statuses write:media`); text, up to 4 photos or 1 video | favourites, boosts, replies |
+| Telegram | bot token + channel; the bot must be an admin that can post; text, up to 10 photos or 1 MP4 video | none (the Bot API can't read view counts) |
+| Discord | channel webhook URL; text, up to 10 photos or 1 MP4 video | reaction count |
 | TikTok | OAuth sign-in (“Continue with TikTok”); needs a video or photos | views, likes, comments, shares |
 | X | OAuth 2.0 sign-in with PKCE (“Continue with X”); text, up to 4 photos or 1 video | impressions (as views), likes, reposts, replies, quotes |
 | LinkedIn | OAuth sign-in (“Continue with LinkedIn”) to a member profile; text, up to 20 photos or 1 MP4 video | impressions (as views), reactions, comments, reposts, once `r_member_postAnalytics` is approved |
+
+### Media: one copy per platform
+
+Platforms disagree on sizes and shapes (TikTok wants 9:16 and photos within 1080p, X caps video at 1280×1024 and photos at 5 MB, Bluesky photos at 2 MB, LinkedIn takes no WebP, Discord fits 25 MiB in a message), so each platform gets its own copy of every photo and video.
+
+- **Specs:** each provider declares `capabilities.media.imageSpec` / `videoSpec` (formats, codecs, byte limit, long/short side, pixel and side-sum limits, aspect range or preferred shape, duration, fps), with the source it came from. `GET /integrations` publishes them.
+- **Copies:** the web app (`app/lib/media/plan.ts`, `prepare.ts`) uploads the original, then works out per platform whether the original fits; where it doesn't, it renders a copy in the browser (photos as JPEG within the byte budget, videos as H.264/AAC MP4 at a bitrate that fits the size limit) and uploads it. Platforms needing the same size and shape share one copy. Where a platform prefers another shape, the person chooses fit (blurred backdrop), fill (crop) or original. Adding an account later makes the missing copies from the attached original.
+- **Storage:** `posts.media[]` keeps the original's path, size and dimensions plus `variants[]` (platform, path, contentType, size, width, height). Copies must be uploads from the same workspace and the same kind as the original. Deleting a post or removing media deletes every copy.
+- **Publishing:** `PublishInput.media` holds the copy for the target's platform (`mediaFor`), and `mediaIssues` (`modules/integrations/media-spec.ts`) checks it against the spec before scheduling and again before sending. Feed items show the account's platform copy; post responses include all copies.
 
 ### Bluesky
 
@@ -103,8 +112,28 @@ Built on the official SDK, following the [Bluesky API docs](https://bsky.network
 - **Sessions:** `PasswordSession` signs in with an app password, never the main password. The session (access and refresh JWTs) is stored encrypted in `provider_sessions` and resumed with `PasswordSession.resume()`; `onUpdated` saves every refresh. We log in again only when the stored session is revoked, because `createSession` is tightly rate limited. Disconnecting an account deletes the session on Bluesky.
 - **Requests:** lexicon calls (`getProfile`, `getPosts`) go through the user's PDS with `atproto-proxy: did:web:api.bsky.app#bsky_appview`, the client pinned to `api.app.service` as the docs recommend. Record writes (`post`) go straight to the PDS.
 - **Posts:** `RichText.detectFacets()` turns links, @mentions and #hashtags into facets. The first link gets a website card (`app.bsky.embed.external`): we fetch its Open Graph data and upload the thumbnail with `uploadBlob`, re-encoded to JPEG under 1 MB so EXIF/GPS metadata is stripped.
+- **Media:** photos (JPEG, PNG, WebP, up to 2 MB and 2048 px a side) go up with `uploadBlob` and are embedded with `app.bsky.embed.images`, up to 4, each with its aspect ratio. A video (MP4, H.264, up to 300 MB) goes through Bluesky's video service, as [the video docs](https://bsky.network/docs/about-bluesky-content/video) recommend: `getUploadLimits` first (accounts need a verified email, and there's a daily limit), a `getServiceAuth` token for the user's PDS (`did:web:<pds host>`, `com.atproto.repo.uploadBlob`), the raw upload to `video.bsky.app/xrpc/app.bsky.video.uploadVideo`, then `getJobStatus` until the blob is ready (up to 4 minutes), embedded with `app.bsky.embed.video`. A video sent before answers `already_exists` with its job, which we reuse. Media takes the post's one embed, so posts with media get no link card.
 - **Link safety:** the URLs come from users, so `link-preview/safe-fetch.ts` only connects to public IPs. Each resolved address is checked inside the connection's own DNS lookup, so DNS rebinding can't get past it. It also only allows ports 80/443, re-validates every redirect, and caps size and time.
 - **Errors:** XRPC errors map to our retry and "needs reconnect" logic. `@atproto/lex` and `lex-password-session` ship separate error classes, so they're matched by shape, not `instanceof`.
+
+### Telegram
+
+Built on the [Bot API](https://core.telegram.org/bots/api) (10.5).
+
+- **Posting:** text goes out with `sendMessage` (up to 4,096 characters). Photos and videos are read from `MEDIA_PUBLIC_BASE_URL` and uploaded as multipart, because Telegram takes less by URL (5 MB photos, 20 MB files): one photo with `sendPhoto`, 2 to 10 as an album with `sendMediaGroup` (`attach://photo<n>`, the caption on the first), a video with `sendVideo` plus its width, height, length and `supports_streaming`. Photos are JPEG, PNG or WebP up to 10 MB, width + height at most 10,000 and no more than 20 times wider than tall (or the reverse); videos are MP4 up to 50 MB. With media, the text is a caption and limited to 1,024 characters. The post links to the first message.
+
+### Discord
+
+Built on [Execute Webhook](https://discord.com/developers/docs/resources/webhook#execute-webhook) with `?wait=true`, so the message comes back for its link and reactions.
+
+- **Posting:** text is sent as JSON (up to 2,000 characters, mentions disabled). With media, the files are read from `MEDIA_PUBLIC_BASE_URL` and attached in one multipart request: `payload_json` describes them and each goes up as `files[n]` ([uploading files](https://discord.com/developers/docs/reference#uploading-files)). Up to 10 files and 25 MB per message, so photos (JPEG, PNG, GIF, WebP) are kept to 2.4 MB each and the video (MP4) to 20 MB, at most 1920×1080.
+
+### Mastodon
+
+Built on the [Mastodon REST API](https://docs.joinmastodon.org/methods/statuses/).
+
+- **Posting:** `POST /api/v1/statuses` with an `Idempotency-Key` (Mastodon drops repeats for an hour). Photos and videos go up first with `POST /api/v2/media` (multipart `file`), which needs the token's `write:media` scope; tokens made before media support lack it, and the upload's 403 asks people to create a new token. A 202 means the server is still processing (typical for video), so we poll `GET /api/v1/media/:id` (206 processing, 200 ready, 422 failed, up to 4 minutes) and then post with `media_ids`.
+- **Limits:** the static spec is Mastodon's default (photos 16 MB and 33,177,600 px; video MP4, WebM or MOV, 99 MB, 8,294,400 px, 120 fps; 4 attachments). Each server can set its own, so before uploading we read `GET /api/v2/instance` and stop with a plain message when a file is over that server's limit.
 
 ### TikTok
 
@@ -150,5 +179,4 @@ To add a platform: add it to `common/enums/platform.enum.ts`, implement `Platfor
 ## Not built yet
 
 - Email: password reset, email verification and invitations for people without an account. `@nestjs/authentication` has handlers for these once an email sender is set up.
-- Media for text platforms: Bluesky, Mastodon, Telegram and Discord still get the text only.
 - More OAuth platforms: Meta, X, LinkedIn and YouTube.

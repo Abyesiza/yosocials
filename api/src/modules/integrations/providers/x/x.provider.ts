@@ -11,6 +11,7 @@ import type {
   ReadinessInput,
   VerifiedAccount,
 } from '../../interfaces/platform-provider.interface.js';
+import { mediaIssues } from '../../media-spec.js';
 import { XApi } from './x-api.js';
 import { XMediaUploader } from './x-media.js';
 import type { XPost, XUser } from './x.types.js';
@@ -21,8 +22,6 @@ export interface XCredentials {
 }
 
 const MAX_IMAGES = 4;
-/** X's limit for photos; videos are capped lower by our own upload limit. */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const LOOKUP_BATCH = 100;
 const POST_ID = /^\d{1,19}$/;
 
@@ -40,7 +39,31 @@ export class XProvider implements PlatformProvider<XCredentials> {
     contentStyle:
       'A short, punchy post. Lead with the point, one idea per post, 0 to 2 #hashtags. Length is weighted: links count as 23, emoji and CJK characters as 2.',
     connect: 'oauth',
-    media: { required: false, video: true, maxImages: MAX_IMAGES },
+    // docs.x.com/x-api/media/quickstart/best-practices (checked 2026-11-28).
+    media: {
+      required: false,
+      video: true,
+      maxImages: MAX_IMAGES,
+      imageSpec: {
+        types: ['image/jpeg', 'image/png', 'image/webp'],
+        maxBytes: 5_000_000,
+        maxLongSide: 4096,
+        maxShortSide: 4096,
+      },
+      videoSpec: {
+        types: ['video/mp4'],
+        codecs: ['avc'],
+        maxBytes: 512 * 1024 * 1024,
+        minDurationSec: 0.5,
+        maxDurationSec: 20 * 60,
+        // The documented bound; larger sizes are only promised to subscribers.
+        maxLongSide: 1280,
+        maxShortSide: 1024,
+        minShortSide: 32,
+        maxFps: 60,
+        aspect: { min: 1 / 3, max: 3 },
+      },
+    },
   };
 
   readonly oauth: OAuthConnector;
@@ -84,12 +107,6 @@ export class XProvider implements PlatformProvider<XCredentials> {
     const issues: string[] = [];
     if (!text.trim() && media.length === 0)
       issues.push('write something or attach media.');
-    const images = media.filter((m) => m.kind === 'image');
-    if (images.length > MAX_IMAGES)
-      issues.push(`use up to ${MAX_IMAGES} photos.`);
-    if (images.some((m) => m.size > MAX_IMAGE_BYTES)) {
-      issues.push('use photos of 5 MB or less. Swap in a smaller photo.');
-    }
     return issues;
   }
 
@@ -97,7 +114,10 @@ export class XProvider implements PlatformProvider<XCredentials> {
     { userId }: XCredentials,
     input: PublishInput,
   ): Promise<PublishResult> {
-    const issues = this.readinessIssues(input);
+    const issues = [
+      ...mediaIssues(input.media, this.capabilities.media),
+      ...this.readinessIssues(input),
+    ];
     if (issues.length > 0)
       throw new BadRequestException(`To post to X, ${issues[0]}`);
 

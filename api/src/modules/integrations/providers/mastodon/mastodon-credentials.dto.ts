@@ -4,7 +4,7 @@ import { IsString, IsUrl, MinLength } from 'class-validator';
 /**
  * Mastodon is federated, so each account lives on an instance. The token is
  * created on that instance under Preferences → Development → New application,
- * with the scopes `read:accounts read:statuses write:statuses`.
+ * with the scopes `read:accounts read:statuses write:statuses write:media`.
  */
 export class MastodonCredentialsDto {
   @ApiProperty({ example: 'https://mastodon.social' })

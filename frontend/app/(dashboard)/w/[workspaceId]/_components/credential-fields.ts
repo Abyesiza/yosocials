@@ -30,7 +30,7 @@ export const CREDENTIAL_FIELDS: Partial<Record<Platform, CredentialSpec>> = {
     steps: [
       "Sign in to your Mastodon instance in a browser.",
       "Go to Preferences → Development and click New application.",
-      "Name it, for example “Aby Socials”. Under Scopes, tick only read:accounts, read:statuses and write:statuses.",
+      "Name it, for example “Aby Socials”. Under Scopes, tick only read:accounts, read:statuses, write:statuses and write:media.",
       "Click Submit, open the new application and copy “Your access token”.",
       "Enter your instance URL below, for example https://mastodon.social, and paste the token.",
     ],
